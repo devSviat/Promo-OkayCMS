@@ -1,0 +1,125 @@
+{
+  "Okay": "4.5.2",
+  "version": "1.0.0",
+  "moduleName": "Promo: акції та знижки",
+  "vendor": {
+    "email": "devsviat@proton.me",
+    "site": "https://github.com/devSviat"
+  },
+  "modifications": {
+    "backend": [
+      {
+        "file": "order.tpl",
+        "changes": [
+          {
+            "find": "okay_list_boding okay_list_price",
+            "appendBefore": "{if !$purchase->gift_product_id}",
+            "appendAfter": "{else} <div class='okay_list_boding okay_list_price text-green text_700 font_16'> {$btr->sviat_promo__gift_label} </div> {/if}"
+          }
+        ]
+      },
+      {
+        "file": "email_order_admin.tpl",
+        "changes": [
+          {
+            "find": "<b>",
+            "appendBefore": "{if !$purchase->gift_product_id}",
+            "appendAfter": "{else} <b>{$btr->sviat_promo__gift_label}</b>{/if}"
+          }
+        ]
+      }
+    ],
+    "front": [
+      {
+        "file": "product.tpl",
+        "changes": [
+          {
+            "find": "variant_select",
+            "closestFind": "details_boxed__item",
+            "appendBefore": "{sviat_promo_product product=$product}"
+          },
+          {
+            "find": "{if $product->featured || $product->special || $product->variant->compare_price}",
+            "replace": "{if $product->featured || $product->special || $product->variant->compare_price || $product->sviat_promo_badge_image}"
+          },
+          {
+            "find": "stickers_product-page",
+            "append": "{sviat_promo_badge_sticker product=$product}"
+          }
+        ]
+      },
+      {
+        "file": "cart_purchases.tpl",
+        "changes": [
+          {
+            "find": "purchase__group",
+            "appendBefore": "{if !$purchase->variant->gift_product_id}",
+            "appendAfter": "{else} <div class='purchase__group promo_gift_purchase_group'> <span class='purchase__price promo_gift_purchase_old'><del>{$purchase->variant->gift_price|convert}</del> <span class='currency hidden-xs-down'>{$currency->sign|escape}</span> </span><span class='purchase__amount promo_gift_purchase_amount'>{$lang->sviat_promo__gift} {$lang->cart_purchase_amount} {$purchase->amount} </span> <span class='purchase__price_total promo_reward__price_free promo_gift_purchase_free' data-lang=\"sviat_promo__free\">{$lang->sviat_promo__free}</span></div> {/if}"
+          },
+          {
+            "find": "<i>{$purchase->variant->name|escape}</i>",
+            "appendAfter": "{if !empty($purchase->meta->sviat_promo_min_order_notice)}<div class=\"text_12 text_grey mt-q\">{$lang->discount_sviat_promo_name}: {$lang->sviat_promo__min_order_notice_from} {$purchase->meta->sviat_promo_min_order_notice->min_order_amount|convert} {$currency->sign|escape}. {$lang->sviat_promo__min_order_notice_missing} {$purchase->meta->sviat_promo_min_order_notice->missing_amount|convert} {$currency->sign|escape}.</div>{/if}{if !empty($purchase->meta->sviat_promo_bundle_hint)}<div class=\"promo_bundle_notice{if !empty($purchase->meta->sviat_promo_bundle_hint->is_applied)} is_applied{/if}\">{if !empty($purchase->meta->sviat_promo_bundle_hint->is_applied)}{$lang->sviat_promo__bundle_applied}{else}{$lang->sviat_promo__bundle_add_more} {$purchase->meta->sviat_promo_bundle_hint->need_units} {$lang->sviat_promo__bundle_units_suffix}{/if}</div>{/if}"
+          },
+          {
+            "find": "purchase__remove",
+            "appendBefore": "{if !$purchase->variant->gift_product_id}",
+            "appendAfter": "{/if}"
+          }
+        ]
+      },
+      {
+        "file": "pop_up_cart.tpl",
+        "changes": [
+          {
+            "find": "purchase__group",
+            "appendBefore": "{if !$purchase->variant->gift_product_id}",
+            "appendAfter": "{else} <div class='purchase__group promo_gift_purchase_group'> <span class='purchase__price promo_gift_purchase_old'><del>{$purchase->variant->gift_price|convert}</del> <span class='currency hidden-xs-down'>{$currency->sign|escape}</span> </span><span class='purchase__amount promo_gift_purchase_amount'>{$lang->sviat_promo__gift} {$lang->cart_purchase_amount} {$purchase->amount} </span> <span class='purchase__price_total promo_reward__price_free promo_gift_purchase_free' data-lang=\"sviat_promo__free\">{$lang->sviat_promo__free}</span></div> {/if}"
+          },
+          {
+            "find": "purchase__remove",
+            "appendBefore": "{if !$purchase->variant->gift_product_id}",
+            "appendAfter": "{/if}"
+          }
+        ]
+      },
+      {
+        "file": "product_list.tpl",
+        "changes": [
+          {
+            "find": "product_preview__image",
+            "append": "{sviat_promo_icon product=$product}"
+          },
+          {
+            "find": "{if $product->featured || $product->special || ($product->variant->price>0 && $product->variant->compare_price>0 && $product->variant->compare_price>$product->variant->price)}",
+            "replace": "{if $product->featured || $product->special || ($product->variant->price>0 && $product->variant->compare_price>0 && $product->variant->compare_price>$product->variant->price) || $product->sviat_promo_badge_image}"
+          },
+          {
+            "find": "product_preview__image",
+            "childrenFind": "class=\"stickers\"",
+            "append": "{sviat_promo_badge_sticker product=$product}"
+          }
+        ]
+      },
+      {
+        "file": "order.tpl",
+        "changes": [
+          {
+            "find": "purchase__group",
+            "appendBefore": "{if !$purchase->gift_product_id}",
+            "appendAfter": "{else} <div class='purchase__group promo_gift_purchase_group'> <span class='purchase__price promo_gift_purchase_amount'>{$lang->sviat_promo__gift}</span> <span class='purchase__price_total promo_reward__price_free promo_gift_purchase_free' data-lang=\"sviat_promo__free\">{$lang->sviat_promo__free}</span></div> {/if}"
+          }
+        ]
+      },
+      {
+        "file": "email_order.tpl",
+        "changes": [
+          {
+            "find": "<b>",
+            "appendBefore": "{if !$purchase->gift_product_id}",
+            "appendAfter": "{else}<b>{$lang->sviat_promo__gift}</b>{/if}"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+/* Якщо акційна ціна виведена рядком product_promo_price_row.tpl — не дублювати великий блок базової ціни */
+.details_boxed__prices:has([data-sviat-promo-price]) > .details_boxed__price {
+    display: none;
+}
