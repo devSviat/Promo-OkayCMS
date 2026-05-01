@@ -6,6 +6,13 @@ use Okay\Core\Entity\Entity;
 
 class PromoCampaignEntity extends Entity
 {
+    public const DEFAULT_IMAGE_WIDTH = 1350;
+    public const DEFAULT_IMAGE_HEIGHT = 400;
+    public const DEFAULT_IMAGE_MOBILE_WIDTH = 600;
+    public const DEFAULT_IMAGE_MOBILE_HEIGHT = 400;
+    public const DEFAULT_CAPTION_BANNER_WIDTH = 800;
+    public const DEFAULT_CAPTION_BANNER_HEIGHT = 80;
+
     public const TYPE_PERCENT = 'percent';
     public const TYPE_FIXED = 'fixed';
     public const TYPE_GIFT = 'gift';
@@ -37,9 +44,15 @@ class PromoCampaignEntity extends Entity
         'date_start',
         'date_end',
         'image',
+        'image_width',
+        'image_height',
         'image_mobile',
+        'image_mobile_width',
+        'image_mobile_height',
         'badge_image',
         'caption_banner_image',
+        'caption_banner_width',
+        'caption_banner_height',
         'product_caption_mode',
         'visible',
         'feed_enabled',

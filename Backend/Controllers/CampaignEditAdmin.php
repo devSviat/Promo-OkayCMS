@@ -185,8 +185,14 @@ class CampaignEditAdmin extends IndexAdmin
                     'discount_percent'     => null,
                     'discount_fixed'       => null,
                     'image_mobile'         => '',
+                    'image_width'          => PromoCampaignEntity::DEFAULT_IMAGE_WIDTH,
+                    'image_height'         => PromoCampaignEntity::DEFAULT_IMAGE_HEIGHT,
+                    'image_mobile_width'   => PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_WIDTH,
+                    'image_mobile_height'  => PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_HEIGHT,
                     'badge_image'          => '',
                     'caption_banner_image' => '',
+                    'caption_banner_width' => PromoCampaignEntity::DEFAULT_CAPTION_BANNER_WIDTH,
+                    'caption_banner_height' => PromoCampaignEntity::DEFAULT_CAPTION_BANNER_HEIGHT,
                     'product_caption_mode' => PromoCampaignEntity::PRODUCT_CAPTION_BELOW,
                 ];
             }

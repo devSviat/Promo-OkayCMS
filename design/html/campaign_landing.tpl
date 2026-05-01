@@ -4,7 +4,7 @@
     {* Content with promo *}
     <div class="post_container__wrapper">
         <div class="promo_campaign__hero{if $promo->is_expired} promo_campaign__hero--expired{/if}{if $promo->is_upcoming} promo_campaign__hero--upcoming{/if}"
-             style="background: #15151a url({if ($is_mobile == true && $is_tablet == false) && !empty($promo->image_mobile)}{$promo->image_mobile|resize:1350:400:false:$config->resized_promo_images_dir}{else}{$promo->image|resize:1350:400:false:$config->resized_promo_images_dir}{/if}) no-repeat center center;">
+             style="--promo-hero-min-height:{if ($is_mobile == true && $is_tablet == false) && !empty($promo->image_mobile)}{$promo->image_mobile_height|default:400|escape}{else}{$promo->image_height|default:400|escape}{/if}px; background: #15151a url({if ($is_mobile == true && $is_tablet == false) && !empty($promo->image_mobile)}{$promo->image_mobile|resize:($promo->image_mobile_width|default:1350):($promo->image_mobile_height|default:400):false:$config->resized_promo_images_dir}{else}{$promo->image|resize:($promo->image_width|default:1350):($promo->image_height|default:400):false:$config->resized_promo_images_dir}{/if}) no-repeat center center;">
             {if $promo->is_expired}
                 <div class="promo_campaign__expired_badge">
                     {$lang->sviat_promo_page__promo_expired|escape}

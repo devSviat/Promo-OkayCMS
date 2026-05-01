@@ -50,6 +50,7 @@ $lang['sviat_promo__col_main_image'] = 'Изображение';
 $lang['sviat_promo__main_image_hint'] = 'Баннер на странице акции (лендинг).';
 $lang['sviat_promo__mobile_image'] = 'Изображение для мобильных';
 $lang['sviat_promo__mobile_image_hint'] = 'Альтернативный баннер для мобильных устройств на странице акции.';
+$lang['sviat_promo__image_size_label'] = 'Размер изображения';
 $lang['sviat_promo__section_gifts'] = 'Подарки';
 $lang['sviat_promo__hint_gifts'] = 'Только для типа «Подарок»: перетаскивайте строки, чтобы изменить порядок.';
 $lang['sviat_promo__section_seo'] = 'SEO (meta-теги)';

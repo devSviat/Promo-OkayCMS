@@ -48,6 +48,7 @@ $lang['sviat_promo__col_main_image'] = 'Image';
 $lang['sviat_promo__main_image_hint'] = 'Banner on the promo landing page.';
 $lang['sviat_promo__mobile_image'] = 'Mobile image';
 $lang['sviat_promo__mobile_image_hint'] = 'Alternative banner for mobile devices on the promo page.';
+$lang['sviat_promo__image_size_label'] = 'Image size';
 $lang['sviat_promo__section_gifts'] = 'Gifts';
 $lang['sviat_promo__hint_gifts'] = 'For “Gift” campaigns only: drag rows to change display order.';
 $lang['sviat_promo__section_seo'] = 'SEO (meta tags)';

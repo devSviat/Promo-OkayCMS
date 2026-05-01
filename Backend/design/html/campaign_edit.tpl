@@ -454,6 +454,21 @@
                                     </div>
                                 </li>
                             </ul>
+                            <div class="heading_label mt-q">{$btr->sviat_promo__image_size_label|escape}</div>
+                            <div class="banner_group__inputs mt-q">
+                                <div class="banner_group__input">
+                                    <div class="input-group">
+                                        <input name="image_width" class="form-control" type="text" value="{$promo->image_width|default:1350|escape}" placeholder="1350" />
+                                        <span class="input-group-addon">px</span>
+                                    </div>
+                                </div>
+                                <div class="banner_group__input">
+                                    <div class="input-group">
+                                        <input name="image_height" class="form-control" type="text" value="{$promo->image_height|default:400|escape}" placeholder="400" />
+                                        <span class="input-group-addon">px</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-lg-3 col-md-12 mb-3 mb-lg-0">
                             <div class="heading_label">
@@ -485,6 +500,21 @@
                                     </div>
                                 </li>
                             </ul>
+                            <div class="heading_label mt-q">{$btr->sviat_promo__image_size_label|escape}</div>
+                            <div class="banner_group__inputs mt-q">
+                                <div class="banner_group__input">
+                                    <div class="input-group">
+                                        <input name="image_mobile_width" class="form-control" type="text" value="{$promo->image_mobile_width|default:1350|escape}" placeholder="1350" />
+                                        <span class="input-group-addon">px</span>
+                                    </div>
+                                </div>
+                                <div class="banner_group__input">
+                                    <div class="input-group">
+                                        <input name="image_mobile_height" class="form-control" type="text" value="{$promo->image_mobile_height|default:400|escape}" placeholder="400" />
+                                        <span class="input-group-addon">px</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-lg-3 col-md-12 mb-3 mb-lg-0">
                             <div class="heading_label">
@@ -547,6 +577,21 @@
                                     </div>
                                 </li>
                             </ul>
+                            <div class="heading_label mt-q">{$btr->sviat_promo__image_size_label|escape}</div>
+                            <div class="banner_group__inputs mt-q">
+                                <div class="banner_group__input">
+                                    <div class="input-group">
+                                        <input name="caption_banner_width" class="form-control" type="text" value="{$promo->caption_banner_width|default:800|escape}" placeholder="800" />
+                                        <span class="input-group-addon">px</span>
+                                    </div>
+                                </div>
+                                <div class="banner_group__input">
+                                    <div class="input-group">
+                                        <input name="caption_banner_height" class="form-control" type="text" value="{$promo->caption_banner_height|default:80|escape}" placeholder="80" />
+                                        <span class="input-group-addon">px</span>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="heading_label mt-1">{$btr->sviat_promo__caption_mode_label|escape}</div>
                             <select name="product_caption_mode" class="selectpicker form-control">
                                 <option value="2"{if ($promo->product_caption_mode|default:0) == 2} selected{/if}>{$btr->sviat_promo__caption_mode_above|escape}</option>

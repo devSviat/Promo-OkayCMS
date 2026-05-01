@@ -98,6 +98,30 @@ class CampaignPayloadRequest
             : PromoCampaignEntity::PRODUCT_CAPTION_BELOW;
 
         $promo->feed_enabled = $this->request->post('feed_enabled', 'boolean') ? 1 : 0;
+        $promo->image_width = $this->normalizePositiveInt(
+            $this->request->post('image_width', 'integer'),
+            PromoCampaignEntity::DEFAULT_IMAGE_WIDTH
+        );
+        $promo->image_height = $this->normalizePositiveInt(
+            $this->request->post('image_height', 'integer'),
+            PromoCampaignEntity::DEFAULT_IMAGE_HEIGHT
+        );
+        $promo->image_mobile_width = $this->normalizePositiveInt(
+            $this->request->post('image_mobile_width', 'integer'),
+            PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_WIDTH
+        );
+        $promo->image_mobile_height = $this->normalizePositiveInt(
+            $this->request->post('image_mobile_height', 'integer'),
+            PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_HEIGHT
+        );
+        $promo->caption_banner_width = $this->normalizePositiveInt(
+            $this->request->post('caption_banner_width', 'integer'),
+            PromoCampaignEntity::DEFAULT_CAPTION_BANNER_WIDTH
+        );
+        $promo->caption_banner_height = $this->normalizePositiveInt(
+            $this->request->post('caption_banner_height', 'integer'),
+            PromoCampaignEntity::DEFAULT_CAPTION_BANNER_HEIGHT
+        );
 
         return $promo;
     }
@@ -182,6 +206,12 @@ class CampaignPayloadRequest
     public function fileCaptionBannerImage()
     {
         return $this->request->files('caption_banner_image');
+    }
+
+    private function normalizePositiveInt($value, int $default): int
+    {
+        $value = (int) $value;
+        return $value > 0 ? $value : $default;
     }
 
 

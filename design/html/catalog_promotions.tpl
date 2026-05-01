@@ -25,7 +25,7 @@
                                     <a class="article__image_link" aria-label="{$promo->name|escape}"
                                        href="{url_generator route='sviat_promo_page' url=$promo->url}">
                                         {if $promo->image}
-                                            <img src="{$promo->image|resize:520:240:false:$config->resized_promo_images_dir:center:center}"
+                                            <img class="promo-catalog-image" src="{$promo->image|resize:520:240:false:$config->resized_promo_images_dir:center:center}" width="520" height="240"
                                                  alt="{$promo->name|escape}" title="{$promo->name|escape}"/>
                                         {else}
                                             <div class="article__no_image d-flex align-items-start">

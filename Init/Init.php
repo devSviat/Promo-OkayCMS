@@ -56,9 +56,15 @@ class Init extends AbstractInit
             (new EntityField('annotation'))->setTypeText()->setIsLang(),
             (new EntityField('description'))->setTypeText()->setIsLang(),
             (new EntityField('image'))->setTypeVarchar(255)->setDefault(''),
+            (new EntityField('image_width'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_WIDTH),
+            (new EntityField('image_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_HEIGHT),
             (new EntityField('image_mobile'))->setTypeVarchar(255)->setDefault(''),
+            (new EntityField('image_mobile_width'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_WIDTH),
+            (new EntityField('image_mobile_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_HEIGHT),
             (new EntityField('badge_image'))->setTypeVarchar(255)->setDefault(''),
             (new EntityField('caption_banner_image'))->setTypeVarchar(255)->setDefault(''),
+            (new EntityField('caption_banner_width'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CAPTION_BANNER_WIDTH),
+            (new EntityField('caption_banner_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CAPTION_BANNER_HEIGHT),
             (new EntityField('product_caption_mode'))->setTypeTinyInt(1, true)->setDefault(0),
             (new EntityField('promo_type'))->setTypeEnum([
                 PromoCampaignEntity::TYPE_PERCENT,
@@ -115,6 +121,12 @@ class Init extends AbstractInit
         $this->registerEntityField(PromoCampaignEntity::class, 'badge_image');
         $this->registerEntityField(PromoCampaignEntity::class, 'image_mobile');
         $this->registerEntityField(PromoCampaignEntity::class, 'caption_banner_image');
+        $this->registerEntityField(PromoCampaignEntity::class, 'image_width');
+        $this->registerEntityField(PromoCampaignEntity::class, 'image_height');
+        $this->registerEntityField(PromoCampaignEntity::class, 'image_mobile_width');
+        $this->registerEntityField(PromoCampaignEntity::class, 'image_mobile_height');
+        $this->registerEntityField(PromoCampaignEntity::class, 'caption_banner_width');
+        $this->registerEntityField(PromoCampaignEntity::class, 'caption_banner_height');
         $this->registerEntityField(PromoCampaignEntity::class, 'product_caption_mode');
         $this->registerEntityField(PromoCampaignEntity::class, 'feed_enabled');
 
@@ -275,5 +287,33 @@ class Init extends AbstractInit
                 );
             }
         }
+    }
+
+    public function update_1_0_2(): void
+    {
+        $this->migrateEntityField(
+            PromoCampaignEntity::class,
+            (new EntityField('image_width'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_WIDTH)
+        );
+        $this->migrateEntityField(
+            PromoCampaignEntity::class,
+            (new EntityField('image_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_HEIGHT)
+        );
+        $this->migrateEntityField(
+            PromoCampaignEntity::class,
+            (new EntityField('image_mobile_width'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_WIDTH)
+        );
+        $this->migrateEntityField(
+            PromoCampaignEntity::class,
+            (new EntityField('image_mobile_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_HEIGHT)
+        );
+        $this->migrateEntityField(
+            PromoCampaignEntity::class,
+            (new EntityField('caption_banner_width'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CAPTION_BANNER_WIDTH)
+        );
+        $this->migrateEntityField(
+            PromoCampaignEntity::class,
+            (new EntityField('caption_banner_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CAPTION_BANNER_HEIGHT)
+        );
     }
 }

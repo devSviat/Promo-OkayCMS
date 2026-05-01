@@ -50,6 +50,7 @@ $lang['sviat_promo__col_main_image'] = 'Зображення';
 $lang['sviat_promo__main_image_hint'] = 'Банер на сторінці акції (лендинг).';
 $lang['sviat_promo__mobile_image'] = 'Зображення для мобільних';
 $lang['sviat_promo__mobile_image_hint'] = 'Альтернативний банер для мобільних пристроїв на сторінці акції.';
+$lang['sviat_promo__image_size_label'] = 'Розмір зображення';
 $lang['sviat_promo__section_gifts'] = 'Подарунки';
 $lang['sviat_promo__hint_gifts'] = 'Лише для типу «Подарунок»: перетягуйте рядки, щоб змінити порядок показу.';
 $lang['sviat_promo__section_seo'] = 'SEO (meta-теги)';

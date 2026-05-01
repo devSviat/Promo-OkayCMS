@@ -2,7 +2,7 @@
 .promo_campaign__hero {
     background-size: cover!important;
     text-align: center;
-    min-height: 400px;
+    min-height: var(--promo-hero-min-height, 400px);
     position: relative;
     height: 0;
     background-color: #15151a;
@@ -127,11 +127,17 @@ a.sviat-promo-caption-banner {
     color: inherit;
 }
 .sviat-promo-caption-banner img {
-    max-height: 80px;
+    max-width: 100%;
     width: auto;
     height: auto;
     display: block;
     border-radius: 6px;
+}
+
+.article__image_link .promo-catalog-image {
+    display: block;
+    width: 100%;
+    height: auto;
 }
 .promo_reward__grid {
     display: -webkit-box;
