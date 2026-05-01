@@ -228,7 +228,7 @@ class Init extends AbstractInit
             PriceUaAdapter::class,
             PromUaAdapter::class,
             RozetkaAdapter::class,
-            // EpitsentrAdapter::class,
+            EpitsentrAdapter::class,
         ] as $adapterClass) {
             if (class_exists($adapterClass) && method_exists($adapterClass, 'getQuery')) {
                 $this->registerChainExtension(

@@ -2,6 +2,8 @@
 
 namespace Okay\Modules\Sviat\Promo\Services;
 
+use Okay\Core\EntityFactory;
+use Okay\Entities\CurrenciesEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
 use Psr\Log\LoggerInterface;
 
@@ -16,10 +18,17 @@ class PromoProductDisplayService
     /** @var LoggerInterface */
     private $logger;
 
-    public function __construct(PromotionEligibility $eligibility, LoggerInterface $logger)
+    /** @var int */
+    private $currencyPrecision;
+
+    public function __construct(PromotionEligibility $eligibility, LoggerInterface $logger, EntityFactory $entityFactory)
     {
         $this->eligibility = $eligibility;
         $this->logger = $logger;
+        /** @var CurrenciesEntity $currenciesEntity */
+        $currenciesEntity = $entityFactory->get(CurrenciesEntity::class);
+        $mainCurrency = $currenciesEntity->getMainCurrency();
+        $this->currencyPrecision = max(0, (int) ($mainCurrency->cents ?? 2));
     }
 
     /**
@@ -92,14 +101,14 @@ class PromoProductDisplayService
 
                 return;
             }
-            $effective = round($base * (100 - $pct) / 100, 4);
+            $effective = round($base * (100 - $pct) / 100, $this->currencyPrecision);
             $product->sviat_promo_discount_percent = $pct;
         } elseif ($type === PromoCampaignEntity::TYPE_FIXED) {
             $fixed = (float) ($campaign->discount_fixed ?? 0);
             if ($fixed <= 0 || $base < $fixed) {
                 return;
             }
-            $effective = round($base - $fixed, 4);
+            $effective = round($base - $fixed, $this->currencyPrecision);
             $product->sviat_promo_discount_percent = round(($fixed / $base) * 100, 2);
         } else {
             return;

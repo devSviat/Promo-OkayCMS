@@ -6,6 +6,7 @@ use Okay\Core\Cart;
 use Okay\Core\Classes\Discount;
 use Okay\Core\EntityFactory;
 use Okay\Core\Classes\Purchase;
+use Okay\Entities\CurrenciesEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
 
 /**
@@ -22,10 +23,14 @@ class CartDiscountPipeline
     /** @var PromotionEligibility */
     private $eligibility;
 
+    /** @var int */
+    private $currencyPrecision;
+
     public function __construct(EntityFactory $entityFactory, PromotionEligibility $eligibility)
     {
         $this->entityFactory = $entityFactory;
         $this->eligibility = $eligibility;
+        $this->currencyPrecision = $this->resolveCurrencyPrecision();
     }
 
     public function applyAfterPurchaseDiscounts(Cart $cart): void
@@ -54,7 +59,10 @@ class CartDiscountPipeline
 
         $this->resetBundleHints($cart);
 
+        $this->normalizeAppliedPromoRounding($cart);
+
         $this->applyPercentAndFixedFallback($cart, $promos);
+        $this->rebuildSviatPromoTotals($cart);
 
         foreach ($promos as $promo) {
             if (!$this->eligibility->campaignMatchesCart($cart, $promo)) {
@@ -128,18 +136,18 @@ class CartDiscountPipeline
                 if ($pct <= 0 || $pct > 100) {
                     continue;
                 }
-                $unitPriceAfter = round($unitPriceBefore * (100 - $pct) / 100, 4);
+                $unitPriceAfter = $this->roundPrice($unitPriceBefore * (100 - $pct) / 100);
             } elseif ($type === PromoCampaignEntity::TYPE_FIXED) {
                 $fixed = (float) ($promo->discount_fixed ?? 0);
                 if ($fixed <= 0 || $unitPriceBefore < $fixed) {
                     continue;
                 }
-                $unitPriceAfter = round($unitPriceBefore - $fixed, 4);
+                $unitPriceAfter = $this->roundPrice($unitPriceBefore - $fixed);
             } else {
                 continue;
             }
 
-            $lineAfter = round($unitPriceAfter * $amount, 4);
+            $lineAfter = $this->roundPrice($unitPriceAfter * $amount);
             if ($lineAfter >= $lineBefore) {
                 continue;
             }
@@ -175,15 +183,57 @@ class CartDiscountPipeline
         return false;
     }
 
+    private function normalizeAppliedPromoRounding(Cart $cart): void
+    {
+        foreach ($cart->purchases as $purchase) {
+            if ($this->eligibility->lineIsBonusGift($purchase)) {
+                continue;
+            }
+            if (!$this->hasSviatPromoDiscountApplied($purchase)) {
+                continue;
+            }
+
+            $amount = max(1, (int) ($purchase->amount ?? 0));
+            $lineAfter = isset($purchase->meta->total_price)
+                ? (float) $purchase->meta->total_price
+                : (float) ($purchase->price ?? 0) * $amount;
+            $lineBefore = isset($purchase->meta->undiscounted_total_price)
+                ? (float) $purchase->meta->undiscounted_total_price
+                : (float) ($purchase->undiscounted_price ?? 0) * $amount;
+
+            $lineAfter = $this->roundPrice(max(0.0, $lineAfter));
+            $lineBefore = $this->roundPrice(max(0.0, $lineBefore));
+
+            $purchase->meta->total_price = $lineAfter;
+            $purchase->price = $this->roundPrice($lineAfter / $amount);
+
+            if (isset($purchase->discounts) && is_array($purchase->discounts)) {
+                foreach ($purchase->discounts as $discount) {
+                    if (!$discount instanceof Discount || $discount->sign !== 'sviat_promo') {
+                        continue;
+                    }
+                    $discount->priceBeforeDiscount = $this->roundPrice($lineBefore / $amount);
+                    $discount->priceAfterDiscount = $this->roundPrice($lineAfter / $amount);
+                    $discount->absoluteDiscount = $this->roundPrice(
+                        max(0.0, $discount->priceBeforeDiscount - $discount->priceAfterDiscount)
+                    );
+                    $discount->percentDiscount = $discount->priceBeforeDiscount > 0
+                        ? round($discount->absoluteDiscount / ($discount->priceBeforeDiscount / 100), 2)
+                        : 0.0;
+                }
+            }
+        }
+    }
+
     private function buildSviatPromoDiscount(object $promo, float $priceBefore, float $priceAfter): Discount
     {
         $discount = new Discount();
         $discount->sign = 'sviat_promo';
         $discount->name = (string) ($promo->name ?? 'Акція');
         $discount->description = 'Promo';
-        $discount->priceBeforeDiscount = round($priceBefore, 4);
-        $discount->priceAfterDiscount = round($priceAfter, 4);
-        $discount->absoluteDiscount = round(max(0.0, $priceBefore - $priceAfter), 4);
+        $discount->priceBeforeDiscount = $this->roundPrice($priceBefore);
+        $discount->priceAfterDiscount = $this->roundPrice($priceAfter);
+        $discount->absoluteDiscount = $this->roundPrice(max(0.0, $priceBefore - $priceAfter));
         $discount->percentDiscount = $priceBefore > 0
             ? round($discount->absoluteDiscount / ($priceBefore / 100), 2)
             : 0.0;
@@ -217,6 +267,23 @@ class CartDiscountPipeline
         $total->percentDiscount = $total->priceBeforeDiscount > 0
             ? round($total->absoluteDiscount / ($total->priceBeforeDiscount / 100), 2)
             : 0.0;
+    }
+
+    private function rebuildSviatPromoTotals(Cart $cart): void
+    {
+        unset($cart->total_purchases_discounts['sviat_promo']);
+
+        foreach ($cart->purchases as $purchase) {
+            $amount = max(1, (int) ($purchase->amount ?? 0));
+            if (empty($purchase->discounts) || !is_array($purchase->discounts)) {
+                continue;
+            }
+            foreach ($purchase->discounts as $discount) {
+                if ($discount instanceof Discount && $discount->sign === 'sviat_promo') {
+                    $this->appendToCartPurchaseDiscountTotals($cart, $discount, $amount);
+                }
+            }
+        }
     }
 
     private function snapshot(object $promo): object
@@ -349,8 +416,22 @@ class CartDiscountPipeline
         }
         $line = (float) $purchase->meta->total_price;
         $newLine = max(0.0, $line - $amount);
-        $purchase->meta->total_price = round($newLine, 4);
+        $purchase->meta->total_price = $this->roundPrice($newLine);
         $amt = max(1, (int) $purchase->amount);
-        $purchase->price = round($purchase->meta->total_price / $amt, 4);
+        $purchase->price = $this->roundPrice($purchase->meta->total_price / $amt);
+    }
+
+    private function resolveCurrencyPrecision(): int
+    {
+        /** @var CurrenciesEntity $currenciesEntity */
+        $currenciesEntity = $this->entityFactory->get(CurrenciesEntity::class);
+        $mainCurrency = $currenciesEntity->getMainCurrency();
+
+        return max(0, (int) ($mainCurrency->cents ?? 2));
+    }
+
+    private function roundPrice(float $price): float
+    {
+        return round($price, $this->currencyPrecision);
     }
 }

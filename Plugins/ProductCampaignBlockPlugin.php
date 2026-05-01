@@ -5,6 +5,7 @@ namespace Okay\Modules\Sviat\Promo\Plugins;
 use Okay\Core\Design;
 use Okay\Core\EntityFactory;
 use Okay\Core\SmartyPlugins\Func;
+use Okay\Entities\CurrenciesEntity;
 use Okay\Helpers\ProductsHelper;
 use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoRewardLineEntity;
@@ -21,6 +22,7 @@ class ProductCampaignBlockPlugin extends Func
     protected $entityFactory;
     protected $productsHelper;
     protected $promotionEligibility;
+    protected $currencyPrecision;
 
     public function __construct(
         Design $design,
@@ -32,6 +34,10 @@ class ProductCampaignBlockPlugin extends Func
         $this->entityFactory = $entityFactory;
         $this->productsHelper = $productsHelper;
         $this->promotionEligibility = $promotionEligibility;
+        /** @var CurrenciesEntity $currenciesEntity */
+        $currenciesEntity = $entityFactory->get(CurrenciesEntity::class);
+        $mainCurrency = $currenciesEntity->getMainCurrency();
+        $this->currencyPrecision = max(0, (int) ($mainCurrency->cents ?? 2));
     }
 
     public function run($vars)
@@ -127,7 +133,7 @@ class ProductCampaignBlockPlugin extends Func
         if ($campaign->promo_type === PromoCampaignEntity::TYPE_PERCENT) {
             $pct = (float) ($campaign->discount_percent ?? 0);
             if ($pct > 0 && $pct <= 100) {
-                $effective = round($base * (100 - $pct) / 100, 4);
+                $effective = round($base * (100 - $pct) / 100, $this->currencyPrecision);
                 $campaign->sviat_promo_effective_price = $effective;
                 $product->sviat_promo_discounted_unit_price = $effective;
                 $product->sviat_promo_discount_percent = $pct;
@@ -135,7 +141,7 @@ class ProductCampaignBlockPlugin extends Func
         } elseif ($campaign->promo_type === PromoCampaignEntity::TYPE_FIXED) {
             $fixed = (float) ($campaign->discount_fixed ?? 0);
             if ($fixed > 0 && $base >= $fixed) {
-                $effective = round($base - $fixed, 4);
+                $effective = round($base - $fixed, $this->currencyPrecision);
                 $campaign->sviat_promo_effective_price = $effective;
                 $product->sviat_promo_discounted_unit_price = $effective;
                 $product->sviat_promo_discount_percent = round(($fixed / $base) * 100, 2);

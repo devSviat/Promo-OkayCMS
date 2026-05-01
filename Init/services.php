@@ -56,6 +56,7 @@ return [
         'arguments' => [
             new SR(PromotionEligibility::class),
             new SR(LoggerInterface::class),
+            new SR(EntityFactory::class),
         ],
     ],
     PromoProductsExtender::class => [

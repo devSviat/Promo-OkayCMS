@@ -5,6 +5,7 @@ namespace Okay\Modules\Sviat\Promo\Services;
 use Okay\Core\EntityFactory;
 use Okay\Core\QueryFactory;
 use Okay\Entities\CategoriesEntity;
+use Okay\Entities\CurrenciesEntity;
 use Okay\Modules\OkayCMS\Feeds\Entities\FeedsEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoFeedLinkEntity;
@@ -59,11 +60,18 @@ class PromoFeedPriceResolver
     /** @var float|null null — не пресет Feeds або не завантажено */
     private $feedPriceChangePercent = null;
 
+    /** @var int */
+    private $currencyPrecision;
+
     public function __construct(EntityFactory $entityFactory, QueryFactory $queryFactory, PromotionEligibility $eligibility)
     {
         $this->entityFactory = $entityFactory;
         $this->queryFactory  = $queryFactory;
         $this->eligibility   = $eligibility;
+        /** @var CurrenciesEntity $currenciesEntity */
+        $currenciesEntity = $entityFactory->get(CurrenciesEntity::class);
+        $mainCurrency = $currenciesEntity->getMainCurrency();
+        $this->currencyPrecision = max(0, (int) ($mainCurrency->cents ?? 2));
     }
 
     /**
@@ -334,7 +342,7 @@ class PromoFeedPriceResolver
             if ($pct <= 0 || $pct > 100) {
                 return null;
             }
-            return round($basePrice * (100 - $pct) / 100, 4);
+            return round($basePrice * (100 - $pct) / 100, $this->currencyPrecision);
         }
 
         if ($type === PromoCampaignEntity::TYPE_FIXED) {
@@ -342,7 +350,7 @@ class PromoFeedPriceResolver
             if ($fixed <= 0 || $basePrice <= $fixed) {
                 return null;
             }
-            return round($basePrice - $fixed, 4);
+            return round($basePrice - $fixed, $this->currencyPrecision);
         }
 
         return null;
