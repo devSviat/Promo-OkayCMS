@@ -26,6 +26,7 @@ use Okay\Modules\Sviat\Promo\Entities\PromoFeedLinkEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoRewardLineEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoScopeEntity;
 use Okay\Modules\Sviat\Promo\ExtendsEntities\ProductsPromoFilter;
+use Okay\Modules\Sviat\Promo\Extenders\PromoCampaignCacheInvalidator;
 use Okay\Modules\Sviat\Promo\Extenders\PromoCartHooks;
 use Okay\Modules\Sviat\Promo\Extenders\PromoFeedsExtender;
 use Okay\Modules\Sviat\Promo\Extenders\PromoGoogleMerchantExtender;
@@ -228,6 +229,32 @@ class Init extends AbstractInit
         $this->registerChainExtension(
             ['class' => Cart::class, 'method' => 'clear'],
             ['class' => PromoCartHooks::class, 'method' => 'clearSviatPromoSession']
+        );
+
+        // Sviat/Redis cache invalidation when promo campaign or scope changes.
+        $this->registerQueueExtension(
+            ['class' => PromoCampaignEntity::class, 'method' => 'add'],
+            ['class' => PromoCampaignCacheInvalidator::class, 'method' => 'onCampaignAdd']
+        );
+        $this->registerQueueExtension(
+            ['class' => PromoCampaignEntity::class, 'method' => 'update'],
+            ['class' => PromoCampaignCacheInvalidator::class, 'method' => 'onCampaignUpdate']
+        );
+        $this->registerQueueExtension(
+            ['class' => PromoCampaignEntity::class, 'method' => 'delete'],
+            ['class' => PromoCampaignCacheInvalidator::class, 'method' => 'onCampaignDelete']
+        );
+        $this->registerQueueExtension(
+            ['class' => PromoScopeEntity::class, 'method' => 'add'],
+            ['class' => PromoCampaignCacheInvalidator::class, 'method' => 'onScopeAdd']
+        );
+        $this->registerQueueExtension(
+            ['class' => PromoScopeEntity::class, 'method' => 'update'],
+            ['class' => PromoCampaignCacheInvalidator::class, 'method' => 'onScopeUpdate']
+        );
+        $this->registerQueueExtension(
+            ['class' => PromoScopeEntity::class, 'method' => 'delete'],
+            ['class' => PromoCampaignCacheInvalidator::class, 'method' => 'onScopeDelete']
         );
 
         // OkayCMS/Feeds

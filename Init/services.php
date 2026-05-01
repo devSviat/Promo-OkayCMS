@@ -18,10 +18,12 @@ use Okay\Modules\Sviat\Promo\Services\PromotionEligibility;
 use Okay\Modules\Sviat\Promo\Services\CartDiscountPipeline;
 use Okay\Modules\Sviat\Promo\Services\PromoFeedPriceResolver;
 use Okay\Modules\Sviat\Promo\Services\PromoProductDisplayService;
+use Okay\Modules\Sviat\Promo\Extenders\PromoCampaignCacheInvalidator;
 use Okay\Modules\Sviat\Promo\Extenders\PromoCartHooks;
 use Okay\Modules\Sviat\Promo\Extenders\PromoFeedsExtender;
 use Okay\Modules\Sviat\Promo\Extenders\PromoGoogleMerchantExtender;
 use Okay\Modules\Sviat\Promo\Extenders\PromoProductsExtender;
+use Okay\Modules\Sviat\Redis\Services\RedisCacheService;
 
 return [
     CampaignPayloadRequest::class => [
@@ -103,5 +105,10 @@ return [
             new SR(XmlFeedHelper::class),
             new SR(EntityFactory::class),
         ],
+    ],
+
+    PromoCampaignCacheInvalidator::class => [
+        'class'     => PromoCampaignCacheInvalidator::class,
+        'arguments' => [new SR(RedisCacheService::class)],
     ],
 ];
