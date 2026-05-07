@@ -11,6 +11,15 @@
                     {include file='svg_icon.tpl' svgId='plus'}
                     <span>{$btr->sviat_promo__add|escape}</span>
                 </a>
+                <button type="button" class="btn btn_small btn-warning ml-1" data-toggle="modal" data-target="#promo_meta_modal">
+                    <span>{$btr->sviat_promo__settings_meta_section|default:'Meta-теги для сторінки /promo'|escape}</span>
+                </button>
+                {if $promos_count}
+                <a class="btn btn_small btn_border-info ml-1" href="{url_generator route='sviat_promo_list' absolute=1}" target="_blank">
+                    {include file='svg_icon.tpl' svgId='eye'}
+                    <span>{$btr->sviat_promo__open_promo_list|default:'Перейти до промоакцій'|escape}</span>
+                </a>
+                {/if}
             </div>
         </div>
     </div>
@@ -28,6 +37,72 @@
         </div>
     </div>
 </div>
+
+{if $message_success}
+    <div class="row">
+        <div class="col-lg-12 col-md-12">
+            <div class="alert alert--success">
+                <div class="alert__content">
+                    <div class="alert__title">{$btr->general_settings_saved|default:'Налаштування збережено'|escape}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+{/if}
+
+<div id="promo_meta_modal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <form method="post">
+                <input type="hidden" name="session_id" value="{$smarty.session.id}">
+                <input type="hidden" name="action" value="save_list_meta">
+                <div class="card-header promo_meta_modal__header">
+                    <div class="heading_modal">{$btr->sviat_promo__settings_meta_section|default:'Meta-теги для сторінки /promo'|escape}</div>
+                    <button type="button" class="btn_close" data-dismiss="modal" aria-label="Close">
+                        {include file='svg_icon.tpl' svgId='delete'}
+                    </button>
+                </div>
+                <div class="modal-body promo_meta_modal__body">
+                    <div class="heading_label">{$btr->sviat_promo__h1_label|default:'H1'|escape}</div>
+                    <input name="list_h1" class="form-control mb-h" type="text" value="{$list_h1|escape}">
+
+                    <div class="heading_label">{$btr->sviat_promo__meta_title_label|default:'Meta-title'|escape}</div>
+                    <input name="list_meta_title" class="form-control mb-h" type="text" value="{$list_meta_title|escape}">
+
+                    <div class="heading_label">{$btr->sviat_promo__meta_description_label|default:'Meta-description'|escape}</div>
+                    <textarea name="list_meta_description" class="form-control okay_textarea mb-h">{$list_meta_description|escape}</textarea>
+
+                    <div class="heading_label">{$btr->sviat_promo__meta_keywords_label|default:'Meta-keywords'|escape}</div>
+                    <input name="list_meta_keywords" class="form-control" type="text" value="{$list_meta_keywords|escape}">
+                </div>
+                <div class="modal-footer justify-content-start">
+                    <button type="button" class="btn btn_small btn_border-info" data-dismiss="modal">{$btr->general_cancel|default:'Скасувати'|escape}</button>
+                    <button type="submit" class="btn btn_small btn_blue">
+                        {include file='svg_icon.tpl' svgId='checked'}
+                        <span>{$btr->general_apply|escape}</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    #promo_meta_modal .promo_meta_modal__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    #promo_meta_modal .promo_meta_modal__header .btn_close {
+        margin-left: auto;
+    }
+    #promo_meta_modal .promo_meta_modal__body {
+        text-align: left;
+    }
+    #promo_meta_modal .promo_meta_modal__body .heading_label {
+        text-align: left;
+    }
+</style>
 
 <div class="boxed fn_toggle_wrap">
     <div class="row">

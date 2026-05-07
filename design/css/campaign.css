@@ -139,6 +139,10 @@ a.sviat-promo-caption-banner {
     width: 100%;
     height: auto;
 }
+.promo_catalog_list .article_item {
+    height: auto;
+    min-height: 355px;
+}
 .promo_reward__grid {
     display: -webkit-box;
     display: -ms-flexbox;

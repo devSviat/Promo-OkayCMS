@@ -92,6 +92,13 @@ class CampaignEditAdmin extends IndexAdmin
                     $campaignRepository->uploadPromoImageField('image_mobile', $mobileImage, $promo, $isNew);
                 }
 
+                if ($payload->postDeleteCatalogImage()) {
+                    $campaignRepository->deletePromoImageField('catalog_image', $promo);
+                }
+                if ($catalogImage = $payload->fileCatalogImage()) {
+                    $campaignRepository->uploadPromoImageField('catalog_image', $catalogImage, $promo, $isNew);
+                }
+
                 if ($payload->postDeleteBadgeImage()) {
                     $campaignRepository->deletePromoImageField('badge_image', $promo);
                 }
@@ -184,11 +191,14 @@ class CampaignEditAdmin extends IndexAdmin
                     'min_order_amount'     => 0,
                     'discount_percent'     => null,
                     'discount_fixed'       => null,
+                    'catalog_image'        => '',
                     'image_mobile'         => '',
                     'image_width'          => PromoCampaignEntity::DEFAULT_IMAGE_WIDTH,
                     'image_height'         => PromoCampaignEntity::DEFAULT_IMAGE_HEIGHT,
                     'image_mobile_width'   => PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_WIDTH,
                     'image_mobile_height'  => PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_HEIGHT,
+                    'catalog_image_width'  => PromoCampaignEntity::DEFAULT_CATALOG_IMAGE_WIDTH,
+                    'catalog_image_height' => PromoCampaignEntity::DEFAULT_CATALOG_IMAGE_HEIGHT,
                     'badge_image'          => '',
                     'caption_banner_image' => '',
                     'caption_banner_width' => PromoCampaignEntity::DEFAULT_CAPTION_BANNER_WIDTH,

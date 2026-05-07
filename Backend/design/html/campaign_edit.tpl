@@ -423,8 +423,8 @@
                     </div>
                 </div>
                 <div class="toggle_body_wrap on fn_card">
-                    <div class="row">
-                        <div class="col-lg-3 col-md-12 mb-3 mb-lg-0">
+                    <div class="row fn_promo_images_grid">
+                        <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6 col-12 mb-3 fn_promo_image_col">
                             <div class="heading_label">
                                 <span>{$btr->sviat_promo__col_main_image|escape}</span>
                                 <i class="fn_tooltips" title="{$btr->sviat_promo__main_image_hint|escape}">
@@ -470,7 +470,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-12 mb-3 mb-lg-0">
+                        <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6 col-12 mb-3 fn_promo_image_col">
                             <div class="heading_label">
                                 <span>{$btr->sviat_promo__mobile_image|escape}</span>
                                 <i class="fn_tooltips" title="{$btr->sviat_promo__mobile_image_hint|escape}">
@@ -516,29 +516,29 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-12 mb-3 mb-lg-0">
+                        <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6 col-12 mb-3 fn_promo_image_col">
                             <div class="heading_label">
-                                <span>{$btr->sviat_promo__badge_image|escape}</span>
-                                <i class="fn_tooltips" title="{$btr->sviat_promo__badge_image_hint|escape}">
+                                <span>{$btr->sviat_promo__catalog_image|escape}</span>
+                                <i class="fn_tooltips" title="{$btr->sviat_promo__catalog_image_hint|escape}">
                                     {include file='svg_icon.tpl' svgId='icon_tooltips'}
                                 </i>
                             </div>
                             <ul class="category_images_list">
                                 <li class="category_image_item fn_image_block">
-                                    {if $promo->badge_image}
-                                        <input type="hidden" class="fn_accept_delete" name="delete_badge_image" value="">
+                                    {if $promo->catalog_image}
+                                        <input type="hidden" class="fn_accept_delete" name="delete_catalog_image" value="">
                                         <div class="fn_parent_image">
                                             <div class="category_image image_wrapper fn_image_wrapper text-xs-center">
                                                 <a href="javascript:;" class="fn_delete_item remove_image"></a>
-                                                <img src="{$promo->badge_image|resize:120:120:false:$config->resized_promo_images_dir}" alt="" />
+                                                <img src="{$promo->catalog_image|resize:300:120:false:$config->resized_promo_images_dir}" alt="" />
                                             </div>
                                         </div>
                                     {else}
                                         <div class="fn_parent_image"></div>
                                     {/if}
-                                    <div class="fn_upload_image dropzone_block_image {if $promo->badge_image} hidden{/if}">
+                                    <div class="fn_upload_image dropzone_block_image {if $promo->catalog_image} hidden{/if}">
                                         <i class="fa fa-plus font-5xl" aria-hidden="true"></i>
-                                        <input class="dropzone_image" name="badge_image" type="file" accept="image/*,.svg" />
+                                        <input class="dropzone_image" name="catalog_image" type="file" accept="image/*,.svg" />
                                     </div>
                                     <div class="category_image image_wrapper fn_image_wrapper fn_new_image text-xs-center hidden">
                                         <a href="javascript:;" class="fn_delete_item remove_image"></a>
@@ -546,8 +546,23 @@
                                     </div>
                                 </li>
                             </ul>
+                            <div class="heading_label mt-q">{$btr->sviat_promo__image_size_label|escape}</div>
+                            <div class="banner_group__inputs mt-q">
+                                <div class="banner_group__input">
+                                    <div class="input-group">
+                                        <input name="catalog_image_width" class="form-control" type="text" value="{$promo->catalog_image_width|default:520|escape}" placeholder="520" />
+                                        <span class="input-group-addon">px</span>
+                                    </div>
+                                </div>
+                                <div class="banner_group__input">
+                                    <div class="input-group">
+                                        <input name="catalog_image_height" class="form-control" type="text" value="{$promo->catalog_image_height|default:240|escape}" placeholder="240" />
+                                        <span class="input-group-addon">px</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-lg-3 col-md-12">
+                        <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6 col-12 mb-3 fn_promo_image_col">
                             <div class="heading_label">
                                 <span>{$btr->sviat_promo__caption_block_title|escape}</span>
                                 <i class="fn_tooltips" title="{$btr->sviat_promo__caption_block_hint|escape}">
@@ -599,6 +614,37 @@
                                 <option value="1"{if ($promo->product_caption_mode|default:0) == 1} selected{/if}>{$btr->sviat_promo__caption_mode_replace|escape}</option>
                                 <option value="3"{if ($promo->product_caption_mode|default:0) == 3} selected{/if}>{$btr->sviat_promo__caption_mode_image_only|escape}</option>
                             </select>
+                        </div>
+                        <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6 col-12 mb-3 fn_promo_image_col">
+                            <div class="heading_label">
+                                <span>{$btr->sviat_promo__badge_image|escape}</span>
+                                <i class="fn_tooltips" title="{$btr->sviat_promo__badge_image_hint|escape}">
+                                    {include file='svg_icon.tpl' svgId='icon_tooltips'}
+                                </i>
+                            </div>
+                            <ul class="category_images_list">
+                                <li class="category_image_item fn_image_block">
+                                    {if $promo->badge_image}
+                                        <input type="hidden" class="fn_accept_delete" name="delete_badge_image" value="">
+                                        <div class="fn_parent_image">
+                                            <div class="category_image image_wrapper fn_image_wrapper text-xs-center">
+                                                <a href="javascript:;" class="fn_delete_item remove_image"></a>
+                                                <img src="{$promo->badge_image|resize:120:120:false:$config->resized_promo_images_dir}" alt="" />
+                                            </div>
+                                        </div>
+                                    {else}
+                                        <div class="fn_parent_image"></div>
+                                    {/if}
+                                    <div class="fn_upload_image dropzone_block_image {if $promo->badge_image} hidden{/if}">
+                                        <i class="fa fa-plus font-5xl" aria-hidden="true"></i>
+                                        <input class="dropzone_image" name="badge_image" type="file" accept="image/*,.svg" />
+                                    </div>
+                                    <div class="category_image image_wrapper fn_image_wrapper fn_new_image text-xs-center hidden">
+                                        <a href="javascript:;" class="fn_delete_item remove_image"></a>
+                                        <img src="" alt="" />
+                                    </div>
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -815,6 +861,15 @@
         </div>
     </div>
 </form>
+
+<style>
+    @media (min-width: 1600px) {
+        .fn_promo_images_grid .fn_promo_image_col {
+            max-width: 20%;
+            flex: 0 0 20%;
+        }
+    }
+</style>
 
 {include file='tinymce_init.tpl'}
 {literal}

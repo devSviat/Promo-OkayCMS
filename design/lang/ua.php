@@ -1,6 +1,6 @@
 <?php
 
-$lang['sviat_promo__list_title'] = 'Акції';
+$lang['sviat_promo__list_title'] = 'Промоакції';
 $lang['sviat_promo__promoaction'] = 'Акція:';
 $lang['sviat_promo__promo_more'] = 'Детальніше';
 $lang['sviat_promo__time_left'] = 'Залишилось';

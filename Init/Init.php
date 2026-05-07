@@ -57,6 +57,9 @@ class Init extends AbstractInit
             (new EntityField('annotation'))->setTypeText()->setIsLang(),
             (new EntityField('description'))->setTypeText()->setIsLang(),
             (new EntityField('image'))->setTypeVarchar(255)->setDefault(''),
+            (new EntityField('catalog_image'))->setTypeVarchar(255)->setDefault(''),
+            (new EntityField('catalog_image_width'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CATALOG_IMAGE_WIDTH),
+            (new EntityField('catalog_image_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CATALOG_IMAGE_HEIGHT),
             (new EntityField('image_width'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_WIDTH),
             (new EntityField('image_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_HEIGHT),
             (new EntityField('image_mobile'))->setTypeVarchar(255)->setDefault(''),
@@ -121,6 +124,9 @@ class Init extends AbstractInit
         $this->registerEntityField(PurchasesEntity::class, 'gift_product_id');
         $this->registerEntityField(PromoCampaignEntity::class, 'badge_image');
         $this->registerEntityField(PromoCampaignEntity::class, 'image_mobile');
+        $this->registerEntityField(PromoCampaignEntity::class, 'catalog_image');
+        $this->registerEntityField(PromoCampaignEntity::class, 'catalog_image_width');
+        $this->registerEntityField(PromoCampaignEntity::class, 'catalog_image_height');
         $this->registerEntityField(PromoCampaignEntity::class, 'caption_banner_image');
         $this->registerEntityField(PromoCampaignEntity::class, 'image_width');
         $this->registerEntityField(PromoCampaignEntity::class, 'image_height');
@@ -146,7 +152,7 @@ class Init extends AbstractInit
         $this->extendBackendMenu('left_catalog', [
             'sviat_promo__menu_title' => [
                 'CampaignListAdmin',
-                'CampaignEditAdmin'
+                'CampaignEditAdmin',
             ],
         ]);
 
@@ -341,6 +347,22 @@ class Init extends AbstractInit
         $this->migrateEntityField(
             PromoCampaignEntity::class,
             (new EntityField('caption_banner_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CAPTION_BANNER_HEIGHT)
+        );
+    }
+
+    public function update_1_0_4(): void
+    {
+        $this->migrateEntityField(
+            PromoCampaignEntity::class,
+            (new EntityField('catalog_image'))->setTypeVarchar(255)->setDefault('')
+        );
+        $this->migrateEntityField(
+            PromoCampaignEntity::class,
+            (new EntityField('catalog_image_width'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CATALOG_IMAGE_WIDTH)
+        );
+        $this->migrateEntityField(
+            PromoCampaignEntity::class,
+            (new EntityField('catalog_image_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CATALOG_IMAGE_HEIGHT)
         );
     }
 }

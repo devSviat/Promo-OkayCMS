@@ -5,12 +5,13 @@ namespace Okay\Modules\Sviat\Promo\Controllers;
 use Okay\Controllers\AbstractController;
 use Okay\Core\EntityFactory;
 use Okay\Core\FrontTranslations;
+use Okay\Core\Languages;
 use Okay\Entities\PagesEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
 
 class PromoCatalogController extends AbstractController
 {
-    public function render(EntityFactory $entityFactory, FrontTranslations $lang)
+    public function render(EntityFactory $entityFactory, FrontTranslations $lang, Languages $languages)
     {
         /** @var PromoCampaignEntity $campaigns */
         $campaigns = $entityFactory->get(PromoCampaignEntity::class);
@@ -37,16 +38,47 @@ class PromoCatalogController extends AbstractController
 
         $pagesEntity = $entityFactory->get(PagesEntity::class);
         $page = $pagesEntity->findOne(['url' => 'promo']);
-        if ($page) {
-            $this->design->assign('page', $page);
-            $this->design->assign('meta_title', $page->meta_title ?: $page->name);
-            $this->design->assign('meta_keywords', $page->meta_keywords);
-            $this->design->assign('meta_description', $page->meta_description);
-            $this->design->assign('description', $page->description ?? '');
+        $defaultListTitle = $lang->getTranslation('sviat_promo__list_title');
+        $langId = (int) $languages->getLangId();
+
+        $settingsMetaTitle = trim((string) $this->settings->get('sviat__promo__list_meta_title'));
+        if ($settingsMetaTitle === '') {
+            $settingsMetaTitle = trim((string) $this->settings->get('sviat__promo__list_meta_title__' . $langId));
         }
 
-        $listPageName = $page ? ($page->name_h1 ?: $page->name) : $lang->getTranslation('sviat_promo__list_title');
-        $this->design->assign('breadcrumbs', [$listPageName]);
+        $settingsMetaKeywords = trim((string) $this->settings->get('sviat__promo__list_meta_keywords'));
+        if ($settingsMetaKeywords === '') {
+            $settingsMetaKeywords = trim((string) $this->settings->get('sviat__promo__list_meta_keywords__' . $langId));
+        }
+
+        $settingsMetaDescription = trim((string) $this->settings->get('sviat__promo__list_meta_description'));
+        if ($settingsMetaDescription === '') {
+            $settingsMetaDescription = trim((string) $this->settings->get('sviat__promo__list_meta_description__' . $langId));
+        }
+        $settingsH1 = trim((string) $this->settings->get('sviat__promo__list_h1'));
+        if ($settingsH1 === '') {
+            $settingsH1 = trim((string) $this->settings->get('sviat__promo__list_h1__' . $langId));
+        }
+        $finalListTitle = $settingsMetaTitle !== '' ? $settingsMetaTitle : $defaultListTitle;
+        $finalH1 = $settingsH1 !== '' ? $settingsH1 : $finalListTitle;
+        $this->design->assign('promo_list_title', $finalListTitle);
+        $this->design->assign('h1', $finalH1);
+
+        if ($page) {
+            $this->design->assign('page', $page);
+            $pageMetaKeywords = trim((string) ($page->meta_keywords ?? ''));
+            $pageMetaDescription = trim((string) ($page->meta_description ?? ''));
+            $this->design->assign('meta_title', $finalListTitle);
+            $this->design->assign('meta_keywords', $settingsMetaKeywords !== '' ? $settingsMetaKeywords : $pageMetaKeywords);
+            $this->design->assign('meta_description', $settingsMetaDescription !== '' ? $settingsMetaDescription : $pageMetaDescription);
+            $this->design->assign('description', $page->description ?? '');
+        } else {
+            $this->design->assign('meta_title', $finalListTitle);
+            $this->design->assign('meta_keywords', $settingsMetaKeywords);
+            $this->design->assign('meta_description', $settingsMetaDescription);
+        }
+
+        $this->design->assign('breadcrumbs', [$finalListTitle]);
 
         $this->response->setContent('catalog_promotions.tpl');
     }

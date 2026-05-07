@@ -5,18 +5,14 @@
     {* The page heading *}
     <div class="block__header block__header--boxed block__header--border">
         <h1 class="block__heading">
-            {if isset($page) && $page}
-            <span data-page="{$page->id}">{if $page->name_h1|escape}{$page->name_h1|escape}{else}{$page->name|escape}{/if}</span>
-            {else}
-            <span>{$lang->sviat_promo__list_title|escape}</span>
-            {/if}
+            <span {if isset($page) && $page->id}data-page="{$page->id}"{/if}>{$h1|default:$promo_list_title|default:$lang->sviat_promo__list_title|escape}</span>
         </h1>
     </div>
 
     {* The list of the promos *}
     <div class="d-flex flex-column">
         <div class="blog_container__boxed">
-            <div class="article_list f_row">
+            <div class="article_list f_row promo_catalog_list">
                 {foreach $promos as $promo}
                     <div class="article_item f_col-sm-6 f_col-md-4 f_col-lg-4">
                         <div class="article__preview">
@@ -24,9 +20,20 @@
                                 <div class="article__image{if $promo->is_expired} promo__image_wrap--expired{/if}{if $promo->is_upcoming} promo__image_wrap--upcoming{/if}">
                                     <a class="article__image_link" aria-label="{$promo->name|escape}"
                                        href="{url_generator route='sviat_promo_page' url=$promo->url}">
-                                        {if $promo->image}
-                                            <img class="promo-catalog-image" src="{$promo->image|resize:520:240:false:$config->resized_promo_images_dir:center:center}" width="520" height="240"
-                                                 alt="{$promo->name|escape}" title="{$promo->name|escape}"/>
+                                        {$promoCatalogImage = $promo->catalog_image|default:$promo->image}
+                                        {$promoCatalogImageWidth = $promo->catalog_image_width|default:520}
+                                        {$promoCatalogImageHeight = $promo->catalog_image_height|default:240}
+                                        {if $promoCatalogImage}
+                                            {$promoCatalogImageResized = $promoCatalogImage|resize:$promoCatalogImageWidth:$promoCatalogImageHeight:false:$config->resized_promo_images_dir:center:center}
+                                            {$promoCatalogImageMobile = $promoCatalogImage|resize:400:234:false:$config->resized_promo_images_dir:center:center}
+                                            <picture>
+                                                <source class="lazy" type="image/webp" data-srcset="{$promoCatalogImageMobile}.webp" media="(max-width: 440px)">
+                                                <source class="lazy" type="image/webp" data-srcset="{$promoCatalogImageResized}.webp">
+                                                <source class="lazy" data-srcset="{$promoCatalogImageMobile}" media="(max-width: 440px)">
+                                                <source class="lazy" data-srcset="{$promoCatalogImageResized}">
+                                                <img class="promo-catalog-image lazy" data-src="{$promoCatalogImageResized}" src="{$rootUrl}/design/{get_theme}/images/xloading.svg" width="{$promoCatalogImageWidth|escape}" height="{$promoCatalogImageHeight|escape}"
+                                                     alt="{$promo->name|escape}" title="{$promo->name|escape}"/>
+                                            </picture>
                                         {else}
                                             <div class="article__no_image d-flex align-items-start">
                                                 {include file="svg.tpl" svgId="no_image"}

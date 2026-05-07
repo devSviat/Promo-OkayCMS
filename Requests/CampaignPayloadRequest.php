@@ -114,6 +114,14 @@ class CampaignPayloadRequest
             $this->request->post('image_mobile_height', 'integer'),
             PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_HEIGHT
         );
+        $promo->catalog_image_width = $this->normalizePositiveInt(
+            $this->request->post('catalog_image_width', 'integer'),
+            PromoCampaignEntity::DEFAULT_CATALOG_IMAGE_WIDTH
+        );
+        $promo->catalog_image_height = $this->normalizePositiveInt(
+            $this->request->post('catalog_image_height', 'integer'),
+            PromoCampaignEntity::DEFAULT_CATALOG_IMAGE_HEIGHT
+        );
         $promo->caption_banner_width = $this->normalizePositiveInt(
             $this->request->post('caption_banner_width', 'integer'),
             PromoCampaignEntity::DEFAULT_CAPTION_BANNER_WIDTH
@@ -183,6 +191,11 @@ class CampaignPayloadRequest
         return $this->request->post('delete_image_mobile');
     }
 
+    public function postDeleteCatalogImage()
+    {
+        return $this->request->post('delete_catalog_image');
+    }
+
     public function postDeleteCaptionBannerImage()
     {
         return $this->request->post('delete_caption_banner_image');
@@ -201,6 +214,11 @@ class CampaignPayloadRequest
     public function fileMobileImage()
     {
         return $this->request->files('image_mobile');
+    }
+
+    public function fileCatalogImage()
+    {
+        return $this->request->files('catalog_image');
     }
 
     public function fileCaptionBannerImage()

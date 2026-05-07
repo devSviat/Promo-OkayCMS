@@ -10,6 +10,8 @@ class PromoCampaignEntity extends Entity
     public const DEFAULT_IMAGE_HEIGHT = 400;
     public const DEFAULT_IMAGE_MOBILE_WIDTH = 600;
     public const DEFAULT_IMAGE_MOBILE_HEIGHT = 400;
+    public const DEFAULT_CATALOG_IMAGE_WIDTH = 520;
+    public const DEFAULT_CATALOG_IMAGE_HEIGHT = 240;
     public const DEFAULT_CAPTION_BANNER_WIDTH = 800;
     public const DEFAULT_CAPTION_BANNER_HEIGHT = 80;
 
@@ -44,6 +46,9 @@ class PromoCampaignEntity extends Entity
         'date_start',
         'date_end',
         'image',
+        'catalog_image',
+        'catalog_image_width',
+        'catalog_image_height',
         'image_width',
         'image_height',
         'image_mobile',
