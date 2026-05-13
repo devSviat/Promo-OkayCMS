@@ -98,6 +98,7 @@ class CampaignPayloadRequest
             : PromoCampaignEntity::PRODUCT_CAPTION_BELOW;
 
         $promo->feed_enabled = $this->request->post('feed_enabled', 'boolean') ? 1 : 0;
+        $promo->exclude_no_image = (int) $this->request->post('exclude_no_image', 'integer');
         $promo->image_width = $this->normalizePositiveInt(
             $this->request->post('image_width', 'integer'),
             PromoCampaignEntity::DEFAULT_IMAGE_WIDTH

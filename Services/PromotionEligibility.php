@@ -27,6 +27,9 @@ class PromotionEligibility
     /** @var array<int, int[]> */
     private $featureValueCache = [];
 
+    /** @var array<int, int> campaignId => exclude_no_image flag */
+    private $excludeNoImageCache = [];
+
     public function __construct(EntityFactory $entityFactory)
     {
         $this->entityFactory = $entityFactory;
@@ -45,6 +48,7 @@ class PromotionEligibility
         $this->scopeCache        = [];
         $this->productCache      = [];
         $this->featureValueCache = [];
+        $this->excludeNoImageCache = [];
     }
 
     /**
@@ -65,6 +69,25 @@ class PromotionEligibility
         }
 
         return $this->productCache[$pid];
+    }
+
+    private function mainImageIdForProduct(int $productId): int
+    {
+        if ($productId < 1) {
+            return 0;
+        }
+        $product = $this->productCache[$productId] ?? null;
+        if ($product !== null) {
+            return (int) ($product->main_image_id ?? 0);
+        }
+        /** @var ProductsEntity $products */
+        $products = $this->entityFactory->get(ProductsEntity::class);
+        $full = $products->get($productId);
+        if ($full !== null && !empty($full->id)) {
+            $this->productCache[$productId] = $full;
+            return (int) ($full->main_image_id ?? 0);
+        }
+        return 0;
     }
 
     public function getCartSubtotal(Cart $cart): float
@@ -106,6 +129,17 @@ class PromotionEligibility
         }
         $t = strtotime($s);
         return $t !== false ? $t : null;
+    }
+
+    private function excludeNoImageForCampaign(int $campaignId): bool
+    {
+        if (!isset($this->excludeNoImageCache[$campaignId])) {
+            /** @var PromoCampaignEntity $campaignsEntity */
+            $campaignsEntity = $this->entityFactory->get(PromoCampaignEntity::class);
+            $campaign = $campaignsEntity->findOne(['id' => $campaignId, 'admin_list' => 1]);
+            $this->excludeNoImageCache[$campaignId] = (int) ($campaign->exclude_no_image ?? 0);
+        }
+        return $this->excludeNoImageCache[$campaignId] === 1;
     }
 
     /**
@@ -237,6 +271,7 @@ class PromotionEligibility
             if (empty($c->id)) {
                 continue;
             }
+            $this->excludeNoImageCache[(int) $c->id] = (int) ($c->exclude_no_image ?? 0);
             if ((int) ($c->visible ?? 0) !== 1) {
                 continue;
             }
@@ -498,6 +533,13 @@ class PromotionEligibility
         array $categoryIds,
         array $productValueIds
     ): bool {
+        if ($this->excludeNoImageForCampaign($campaignId)) {
+            $mainImageId = $this->mainImageIdForProduct($productId);
+            if ($mainImageId < 1) {
+                return false;
+            }
+        }
+
         $rows = $this->scopeRowsForCampaign($campaignId);
         if ($rows === []) {
             return false;

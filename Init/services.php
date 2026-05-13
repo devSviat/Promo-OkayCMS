@@ -18,6 +18,10 @@ use Okay\Modules\Sviat\Promo\Services\PromotionEligibility;
 use Okay\Modules\Sviat\Promo\Services\CartDiscountPipeline;
 use Okay\Modules\Sviat\Promo\Services\PromoFeedPriceResolver;
 use Okay\Modules\Sviat\Promo\Services\PromoProductDisplayService;
+use Okay\Modules\Sviat\Promo\Services\PurchasePriceRounder;
+use Okay\Modules\Sviat\Promo\Services\AdminOrderPromoApplier;
+use Okay\Modules\Sviat\Promo\Services\AdminPurchasePriceRounder;
+use Okay\Modules\Sviat\Promo\Services\ProductsWithoutImageFilter;
 use Okay\Modules\Sviat\Promo\Extenders\PromoCampaignCacheInvalidator;
 use Okay\Modules\Sviat\Promo\Extenders\PromoCartHooks;
 use Okay\Modules\Sviat\Promo\Extenders\PromoFeedsExtender;
@@ -59,6 +63,31 @@ return [
             new SR(PromotionEligibility::class),
             new SR(LoggerInterface::class),
             new SR(EntityFactory::class),
+        ],
+    ],
+    PurchasePriceRounder::class => [
+        'class'     => PurchasePriceRounder::class,
+        'arguments' => [
+            new SR(EntityFactory::class),
+        ],
+    ],
+    ProductsWithoutImageFilter::class => [
+        'class'     => ProductsWithoutImageFilter::class,
+        'arguments' => [
+            new SR(EntityFactory::class),
+        ],
+    ],
+    AdminPurchasePriceRounder::class => [
+        'class'     => AdminPurchasePriceRounder::class,
+        'arguments' => [
+            new SR(EntityFactory::class),
+        ],
+    ],
+    AdminOrderPromoApplier::class => [
+        'class'     => AdminOrderPromoApplier::class,
+        'arguments' => [
+            new SR(EntityFactory::class),
+            new SR(PromotionEligibility::class),
         ],
     ],
     PromoProductsExtender::class => [

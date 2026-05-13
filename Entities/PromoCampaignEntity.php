@@ -68,6 +68,7 @@ class PromoCampaignEntity extends Entity
         'min_order_amount',
         'discount_percent',
         'discount_fixed',
+        'exclude_no_image',
     ];
 
     protected static $additionalFields = [

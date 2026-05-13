@@ -35,6 +35,7 @@ class ProductsPromoFilter extends AbstractModuleEntityFilter
                 FROM __sviat__promos sp
                 WHERE sp.visible = 1
                   AND (sp.has_date_range = 0 OR (DATE(sp.date_start) <= DATE(NOW()) AND DATE(sp.date_end) >= DATE(NOW())))
+                  AND (sp.exclude_no_image = 0 OR COALESCE(p.main_image_id, 0) > 0)
                   AND (
                     (sp.promo_type = \'percent\' AND sp.discount_percent > 0 AND sp.discount_percent <= 100)
                     OR (
@@ -282,6 +283,12 @@ END";
     AND ($excludeFeatureValueCheck = 1)
 )";
 
+        $excludeNoImageCheck = "CASE
+            WHEN (SELECT sp.exclude_no_image FROM __sviat__promos sp WHERE sp.id = :sv_promo_cid) = 1
+                THEN COALESCE(p.main_image_id, 0) > 0
+            ELSE 1
+        END";
+
         // Для fixed-акції товар потрапляє у вибірку лише якщо є варіант з ціною >= discount_fixed.
         // Для інших типів умову пропускаємо.
         $fixedPriceCheck = 'CASE
@@ -308,7 +315,7 @@ END";
         END';
 
         // Усі типи перевіряємо через "І", плюс виключення і fixed-перевірка.
-        $this->select->where("($productCheck = 1) AND ($categoryCheck = 1) AND ($brandCheck = 1) AND ($featureValueCheck = 1) AND ($fixedPriceCheck = 1) AND $exclusionCheck");
+        $this->select->where("($productCheck = 1) AND ($categoryCheck = 1) AND ($brandCheck = 1) AND ($featureValueCheck = 1) AND ($fixedPriceCheck = 1) AND ($excludeNoImageCheck = 1) AND $exclusionCheck");
         $this->select->bindValue('sv_promo_cid', $cid);
     }
 

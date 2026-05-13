@@ -290,7 +290,7 @@ class PromoFeedPriceResolver
      *  – прив'язана до поточного фіда (type + id),
      *  – підходить товару за правилами скопу.
      */
-    public function findBestCampaign(int $productId, int $brandId, int $mainCategoryId): ?object
+    public function findBestCampaign(int $productId, int $brandId, int $mainCategoryId, int $mainImageId = 0): ?object
     {
         if (empty($this->activeCampaigns)) {
             return null;
@@ -305,6 +305,9 @@ class PromoFeedPriceResolver
 
         foreach ($eligible as $campaign) {
             $cid   = (int) $campaign->id;
+            if (!empty($campaign->exclude_no_image) && $mainImageId < 1) {
+                continue;
+            }
             if ($this->matchesCampaignScope($cid, $productId, $brandId, $mainCategoryId)) {
                 $candidates[] = $campaign;
             }

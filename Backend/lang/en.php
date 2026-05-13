@@ -79,3 +79,7 @@ $lang['sviat_promo__meta_description_label'] = 'Meta-description';
 $lang['sviat_promo__features']        = 'Properties';
 $lang['sviat_promo__add_feature_row'] = 'Add property filter';
 $lang['sviat_promo__feature_select']  = 'Select property';
+
+$lang['sviat_promo__exclude_no_image'] = 'Exclude products without images';
+$lang['sviat_promo__exclude_no_image_hint'] = 'When enabled, products without a main image are excluded from the campaign — in the catalog, cart, and feeds.';
+$lang['sviat_promo__exclude_no_image_alert'] = 'This product has no image and cannot be added while the "no-image" filter is enabled.';

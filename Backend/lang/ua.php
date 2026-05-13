@@ -79,3 +79,7 @@ $lang['sviat_promo__meta_description_label'] = 'Meta-description';
 $lang['sviat_promo__features']        = 'Властивості';
 $lang['sviat_promo__add_feature_row'] = 'Додати фільтр по властивості';
 $lang['sviat_promo__feature_select']  = 'Оберіть властивість';
+
+$lang['sviat_promo__exclude_no_image'] = 'Виключати товари без фото';
+$lang['sviat_promo__exclude_no_image_hint'] = 'Коли увімкнено: товари без головного зображення не входять в акцію — ані в каталог, ані в кошик, ані у фіди.';
+$lang['sviat_promo__exclude_no_image_alert'] = 'Цей товар не має фото. Його не можна додати до акції з увімкненим фільтром «без фото».';

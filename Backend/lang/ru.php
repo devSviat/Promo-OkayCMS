@@ -79,3 +79,7 @@ $lang['sviat_promo__meta_description_label'] = 'Meta-description';
 $lang['sviat_promo__features']        = 'Свойства';
 $lang['sviat_promo__add_feature_row'] = 'Добавить фильтр по свойству';
 $lang['sviat_promo__feature_select']  = 'Выберите свойство';
+
+$lang['sviat_promo__exclude_no_image'] = 'Исключать товары без фото';
+$lang['sviat_promo__exclude_no_image_hint'] = 'Когда включено: товары без главного изображения не входят в акцию — ни в каталоге, ни в корзине, ни в фидах.';
+$lang['sviat_promo__exclude_no_image_alert'] = 'У этого товара нет фото. Его нельзя добавить с включённым фильтром «без фото».';

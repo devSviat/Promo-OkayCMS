@@ -109,6 +109,22 @@
 
                 <div class="toggle_body_wrap on fn_card">
 
+                    {* ── Чекбокс: виключати товари без фото ── *}
+                    <div class="row mb-1">
+                        <div class="col-lg-12 col-md-12 col-sm-12">
+                            <label class="switch switch-default">
+                                <input type="hidden" name="exclude_no_image" value="0" />
+                                <input class="switch-input fn_exclude_no_image" name="exclude_no_image" value="1" type="checkbox" {if !empty($promo->exclude_no_image)}checked=""{/if} />
+                                <span class="switch-label"></span>
+                                <span class="switch-handle"></span>
+                            </label>
+                            <span class="ml-h">{$btr->sviat_promo__exclude_no_image|escape}</span>
+                            <i class="fn_tooltips ml-q" title="{$btr->sviat_promo__exclude_no_image_hint|escape}">
+                                {include file='svg_icon.tpl' svgId='icon_tooltips'}
+                            </i>
+                        </div>
+                    </div>
+
                     {* ── Рядок 1: Назва/URL ── *}
                     <div class="row">
                         <div class="col-lg-6 col-md-12 col-sm-12">
@@ -1023,6 +1039,11 @@
                 noCache: false,
                 onSelect:
                     function(suggestion){
+                        if ($('input.fn_exclude_no_image').is(':checked') && (!suggestion.data || !suggestion.data.image)) {
+                            alert({/literal}'{$btr->sviat_promo__exclude_no_image_alert|escape:'javascript'}'{literal});
+                            $("input#promo_gifts").val('').focus().blur();
+                            return;
+                        }
                         $("input#promo_gifts").val('').focus().blur();
                         new_item = new_promo_gift.clone().appendTo('.promo_gifts');
                         new_item.removeAttr('id');
@@ -1061,6 +1082,11 @@
                     minChars: 0,
                     noCache: false,
                     onSelect: function(suggestion) {
+                        if ($('input.fn_exclude_no_image').is(':checked') && (!suggestion.data || !suggestion.data.image)) {
+                            alert({/literal}'{$btr->sviat_promo__exclude_no_image_alert|escape:'javascript'}'{literal});
+                            $input.val('').focus().blur();
+                            return;
+                        }
                         $input.val('').focus().blur();
                         var $newItem = $newRowTemplate.find('.fn_row').clone(true);
                         $newItem.find('.fn_promo_scope_product_name')

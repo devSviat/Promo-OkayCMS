@@ -49,7 +49,8 @@ class PromoFeedsExtender implements ExtensionInterface
         $campaign = $this->resolver->findBestCampaign(
             (int) ($item->product_id ?? 0),
             (int) ($item->brand_id ?? 0),
-            (int) ($item->main_category_id ?? 0)
+            (int) ($item->main_category_id ?? 0),
+            (int) ($item->main_image_id ?? 0)
         );
 
         if ($campaign === null) {

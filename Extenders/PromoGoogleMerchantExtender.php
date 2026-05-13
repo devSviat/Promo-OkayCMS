@@ -88,7 +88,8 @@ class PromoGoogleMerchantExtender implements ExtensionInterface
         $campaign = $this->resolver->findBestCampaign(
             (int) ($product->product_id ?? 0),
             (int) ($product->brand_id ?? 0),
-            (int) ($product->main_category_id ?? 0)
+            (int) ($product->main_category_id ?? 0),
+            (int) ($product->main_image_id ?? 0)
         );
 
         if ($campaign === null) {

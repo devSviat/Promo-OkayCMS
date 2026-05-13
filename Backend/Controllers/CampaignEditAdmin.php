@@ -16,6 +16,7 @@ use Okay\Modules\Sviat\Promo\Entities\PromoRewardLineEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoScopeEntity;
 use Okay\Modules\Sviat\Promo\Helpers\CampaignRepository;
 use Okay\Modules\Sviat\Promo\Requests\CampaignPayloadRequest;
+use Okay\Modules\Sviat\Promo\Services\ProductsWithoutImageFilter;
 
 class CampaignEditAdmin extends IndexAdmin
 {
@@ -23,7 +24,8 @@ class CampaignEditAdmin extends IndexAdmin
         EntityFactory        $entityFactory,
         CampaignPayloadRequest $payload,
         CampaignRepository   $campaignRepository,
-        BackendTranslations  $backendTranslations
+        BackendTranslations  $backendTranslations,
+        ProductsWithoutImageFilter $productsWithoutImageFilter
     ) {
         if ($this->request->get('action') === 'feature_values') {
             $this->response->setContent(
@@ -49,6 +51,17 @@ class CampaignEditAdmin extends IndexAdmin
             $promoGifts  = $payload->postPromoGift($promo);
             $rawObjects  = $payload->postPromoObject();
             $promoObjects = $this->normalizePromoObjects($rawObjects);
+
+            if (!empty($promo->exclude_no_image)) {
+                foreach (['include', 'exclude'] as $scopeMode) {
+                    if (empty($promoObjects[$scopeMode]['product'])) {
+                        continue;
+                    }
+                    $promoObjects[$scopeMode]['product'] = $productsWithoutImageFilter->filterIds(
+                        $promoObjects[$scopeMode]['product']
+                    );
+                }
+            }
 
             if (empty($promo->name)) {
                 $this->design->assign('message_error', 'empty_name');
@@ -185,6 +198,7 @@ class CampaignEditAdmin extends IndexAdmin
                     'url'                  => '',
                     'visible'              => 1,
                     'feed_enabled'         => 0,
+                    'exclude_no_image'     => 0,
                     'has_date_range'       => 0,
                     'promo_type'           => PromoCampaignEntity::TYPE_PERCENT,
                     'priority'             => 0,

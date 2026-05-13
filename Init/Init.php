@@ -3,6 +3,7 @@
 namespace Okay\Modules\Sviat\Promo\Init;
 
 use Okay\Core\Cart;
+use Okay\Core\Classes\Purchase;
 use Okay\Core\Modules\AbstractInit;
 use Okay\Core\Modules\EntityField;
 use Okay\Entities\ProductsEntity;
@@ -31,6 +32,10 @@ use Okay\Modules\Sviat\Promo\Extenders\PromoCartHooks;
 use Okay\Modules\Sviat\Promo\Extenders\PromoFeedsExtender;
 use Okay\Modules\Sviat\Promo\Extenders\PromoGoogleMerchantExtender;
 use Okay\Modules\Sviat\Promo\Extenders\PromoProductsExtender;
+use Okay\Admin\Helpers\BackendOrdersHelper;
+use Okay\Modules\Sviat\Promo\Services\AdminOrderPromoApplier;
+use Okay\Modules\Sviat\Promo\Services\AdminPurchasePriceRounder;
+use Okay\Modules\Sviat\Promo\Services\PurchasePriceRounder;
 
 class Init extends AbstractInit
 {
@@ -84,6 +89,7 @@ class Init extends AbstractInit
             (new EntityField('date_start'))->setTypeDatetime()->setNullable()->setIndex(),
             (new EntityField('date_end'))->setTypeDatetime()->setNullable()->setIndex(),
             (new EntityField('feed_enabled'))->setTypeTinyInt(1, true)->setDefault(0)->setIndex(),
+            (new EntityField('exclude_no_image'))->setTypeTinyInt(1, true)->setDefault(0),
             (new EntityField('visible'))->setTypeTinyInt(1, true)->setDefault(0)->setIndex(),
             (new EntityField('priority'))->setTypeInt(11, true)->setDefault(0)->setIndex(),
             (new EntityField('position'))->setTypeInt(11, true)->setDefault(0)->setIndex(),
@@ -136,6 +142,7 @@ class Init extends AbstractInit
         $this->registerEntityField(PromoCampaignEntity::class, 'caption_banner_height');
         $this->registerEntityField(PromoCampaignEntity::class, 'product_caption_mode');
         $this->registerEntityField(PromoCampaignEntity::class, 'feed_enabled');
+        $this->registerEntityField(PromoCampaignEntity::class, 'exclude_no_image');
 
         $this->registerBackendController('CampaignListAdmin');
         $this->registerBackendController('CampaignEditAdmin');
@@ -220,6 +227,25 @@ class Init extends AbstractInit
         $this->registerChainExtension(
             ['class' => CartHelper::class, 'method' => 'prepareCart'],
             ['class' => PromoCartHooks::class, 'method' => 'getPromoGiftPurchases']
+        );
+
+        $this->registerChainExtension(
+            ['class' => Purchase::class, 'method' => 'getForDB'],
+            ['class' => PurchasePriceRounder::class, 'method' => 'normalize']
+        );
+
+        $this->registerChainExtension(
+            ['class' => BackendOrdersHelper::class, 'method' => 'prepareCommonPurchase'],
+            ['class' => AdminPurchasePriceRounder::class, 'method' => 'normalize']
+        );
+
+        $this->registerChainExtension(
+            ['class' => BackendOrdersHelper::class, 'method' => 'addPurchase'],
+            ['class' => AdminOrderPromoApplier::class, 'method' => 'rememberAddedPurchase']
+        );
+        $this->registerChainExtension(
+            ['class' => BackendOrdersHelper::class, 'method' => 'executeCustomPost'],
+            ['class' => AdminOrderPromoApplier::class, 'method' => 'applyPromosToNewPurchases']
         );
 
         $this->registerChainExtension(
@@ -363,6 +389,14 @@ class Init extends AbstractInit
         $this->migrateEntityField(
             PromoCampaignEntity::class,
             (new EntityField('catalog_image_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CATALOG_IMAGE_HEIGHT)
+        );
+    }
+
+    public function update_1_0_5(): void
+    {
+        $this->migrateEntityField(
+            PromoCampaignEntity::class,
+            (new EntityField('exclude_no_image'))->setTypeTinyInt(1, true)->setDefault(0)
         );
     }
 }
