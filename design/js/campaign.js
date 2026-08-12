@@ -1,3 +1,13 @@
+/* CSRF-токен вітрини. Куку okay_csrf сервер навмисно лишає доступною скриптам.
+
+   Визначення одне на всю сторінку: тема вже віддає okayCsrfToken(), і тоді
+   виграє воно — зміниш ім'я куки чи формат у темі, і всі модулі підуть за ним.
+   Власне визначення тут потрібне лише для чужої теми, яка цієї функції не має. */
+window.okayCsrfToken = window.okayCsrfToken || function () {
+    var match = document.cookie.match(/(?:^|;\s*)okay_csrf=([0-9a-f]{64})/);
+    return match ? match[1] : "";
+};
+
 $(function () {
     function pad2(v) {
         return v < 10 ? "0" + v : String(v);
@@ -80,7 +90,30 @@ $(document).on("click", ".fn_gift", function () {
 
 $(document).on("submit", ".fn_variants", function () {
     var $form = $(this);
-    var $gift = $form.closest(".details_boxed__item").find(".fn_gift.selected").first();
+
+    /* Віджет подарунка не обовʼязково лежить у тому самому .details_boxed__item,
+       що й форма: модифікація модуля вставляє його СУСІДНІМ блоком перед нею.
+       Тому йдемо вгору по предках — але не далі межі одного товару.
+
+       Межа визначається не класом, а складом: щойно предок містить більш ніж
+       одну форму купівлі, ми вже піднялись у список товарів, і будь-який
+       знайдений там подарунок належить сусідній картці. На сторінці товару
+       форма одна, тож обхід доходить до спільного блоку й знаходить віджет. */
+    var $gift = $();
+    $form.parents().each(function () {
+        var $ancestor = $(this);
+
+        if ($ancestor.find(".fn_variants").length > 1) {
+            return false;
+        }
+
+        var $found = $ancestor.find(".fn_gift.selected").first();
+        if ($found.length) {
+            $gift = $found;
+            return false;
+        }
+    });
+
     if (!$gift.length) {
         return;
     }
@@ -109,8 +142,17 @@ $(document).on("submit", ".fn_variants", function () {
             gift_product: giftProduct,
             variant: variant,
             gift_variant: giftVariant,
-            promo_id: promoId
+            promo_id: promoId,
+            customer_csrf_token: okayCsrfToken()
         },
         dataType: "json"
+    }).fail(function (xhr) {
+        /* Запит побічний до купівлі: товар усе одно кладеться в кошик, тож
+           зупиняти покупця не можна. Але мовчати теж не варто — без цього
+           рядка втрачений вибір подарунка не видно ніде, а сервер підставить
+           перший подарунок кампанії замість обраного. */
+        if (window.console && console.warn) {
+            console.warn("Sviat/Promo: вибір подарунка не збережено, HTTP " + xhr.status);
+        }
     });
 });
