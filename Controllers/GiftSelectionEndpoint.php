@@ -13,6 +13,11 @@ class GiftSelectionEndpoint extends AbstractController
 {
     public function ajaxAddGiftToCart(Request $request, EntityFactory $entityFactory, PromotionEligibility $eligibility)
     {
+        // Вибір подарунка осідає в сесії й потрапляє у замовлення, тобто це
+        // мутація кошика — така сама, як у CartController, і охорона потрібна
+        // та сама. Відповідь читають як json, тож і відмова має бути json.
+        $this->requireCustomerCsrf(true);
+
         $gift = $request->post('gift_product', 'integer');
         $gift_variant = $request->post('gift_variant', 'integer');
         $product = $request->post('product', 'integer');
