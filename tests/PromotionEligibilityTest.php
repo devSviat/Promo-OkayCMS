@@ -102,6 +102,7 @@ class PromotionEligibilityTest extends PromoTestCase
         ]));
 
         $scopeEntity = $this->createMock(\Okay\Modules\Sviat\Promo\Entities\PromoScopeEntity::class);
+        $scopeEntity->method('noLimit')->willReturnSelf();
         $scopeEntity->method('find')->willReturn([
             (object) ['promo_id' => 5, 'type' => 'product', 'object_id' => 100, 'exclude' => 0],
             (object) ['promo_id' => 5, 'type' => 'product', 'object_id' => 200, 'exclude' => 0],

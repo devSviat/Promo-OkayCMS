@@ -100,17 +100,12 @@ class PromoFeedPriceResolverTest extends PromoTestCase
 
         $ref = new \ReflectionClass($resolver);
 
-        $feedType = $ref->getProperty('currentFeedType');
-        if (PHP_VERSION_ID < 80100) { $feedType->setAccessible(true); }        $feedType->setValue($resolver, 'feeds');
-        $feedId = $ref->getProperty('currentFeedId');
-        if (PHP_VERSION_ID < 80100) { $feedId->setAccessible(true); }        $feedId->setValue($resolver, 99);
+        $feedType = self::accessible($ref->getProperty('currentFeedType'));        $feedType->setValue($resolver, 'feeds');
+        $feedId = self::accessible($ref->getProperty('currentFeedId'));        $feedId->setValue($resolver, 99);
 
-        $active = $ref->getProperty('activeCampaigns');
-        if (PHP_VERSION_ID < 80100) { $active->setAccessible(true); }        $active->setValue($resolver, [7 => $promo]);
-        $links = $ref->getProperty('feedLinksByCampaign');
-        if (PHP_VERSION_ID < 80100) { $links->setAccessible(true); }        $links->setValue($resolver, [7 => ['feeds' => [99]]]);
-        $scopes = $ref->getProperty('scopesByCampaign');
-        if (PHP_VERSION_ID < 80100) { $scopes->setAccessible(true); }        $scopes->setValue($resolver, [7 => [
+        $active = self::accessible($ref->getProperty('activeCampaigns'));        $active->setValue($resolver, [7 => $promo]);
+        $links = self::accessible($ref->getProperty('feedLinksByCampaign'));        $links->setValue($resolver, [7 => ['feeds' => [99]]]);
+        $scopes = self::accessible($ref->getProperty('scopesByCampaign'));        $scopes->setValue($resolver, [7 => [
             'inclusions' => ['has_rows' => true, 'products' => [1 => true], 'brands' => [], 'categories' => [], 'feature_groups' => []],
             'exclusions' => ['has_rows' => false, 'products' => [], 'brands' => [], 'categories' => [], 'feature_groups' => []],
         ]]);

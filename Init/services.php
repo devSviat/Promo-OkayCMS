@@ -94,6 +94,7 @@ return [
         'class'     => PromoProductsExtender::class,
         'arguments' => [
             new SR(PromoProductDisplayService::class),
+            new SR(PromotionEligibility::class),
         ],
     ],
     PromoCartHooks::class => [

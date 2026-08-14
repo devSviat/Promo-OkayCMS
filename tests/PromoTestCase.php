@@ -12,6 +12,22 @@ use PHPUnit\Framework\TestCase;
 abstract class PromoTestCase extends TestCase
 {
     /**
+     * Сток ще на PHP 8.0, де без setAccessible() рефлексія не пускає до
+     * private, а форк уже на 8.5, де сам виклик застарілий і валить прогін.
+     *
+     * @param \ReflectionProperty|\ReflectionMethod $reflected
+     * @return \ReflectionProperty|\ReflectionMethod
+     */
+    protected static function accessible($reflected)
+    {
+        if (PHP_VERSION_ID < 80100) {
+            $reflected->setAccessible(true);
+        }
+
+        return $reflected;
+    }
+
+    /**
      * Builds an EntityFactory mock that maps class FQCN -> mock instance.
      *
      * @param array<class-string, object> $entityMocks

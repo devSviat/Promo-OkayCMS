@@ -30,9 +30,221 @@ class PromotionEligibility
     /** @var array<int, int> campaignId => exclude_no_image flag */
     private $excludeNoImageCache = [];
 
+    /** @var array<int, int[]> productId => category_id[] з __products_categories */
+    private $categoryRowsCache = [];
+
+    /** @var array<int, int[]> productId => promo_id[], заповнюється префетчем */
+    private $promoIdsCache = [];
+
+    /** @var array<int, object|false> campaignId => рядок кампанії, false = відомо відсутня */
+    private $campaignCache = [];
+
+    /** @var array<int, int> productId => main_image_id зі списку */
+    private $mainImageIdCache = [];
+
+    /** @var array<int, object> товари поточного списку (можуть бути урізані) */
+    private $listProducts = [];
+
+    /** Таблиця скопів завелика — префетч вимкнено до кінця запиту. */
+    private $scopePrefetchDisabled = false;
+
+    /** Чи $scopeCache містить УСІ рядки скопів, а не лише запитані кампанії. */
+    private $scopeCacheComplete = false;
+
+    /** Захист від рекурсії: префетч сам смикає getList, який знову кличе префетч. */
+    private $prefetching = false;
+
+    /**
+     * Понад стільки рядків таблицю скопів цілком не читаємо. Реально їх
+     * одиниці — це запобіжник, а не робочий режим.
+     */
+    private const MAX_PREFETCHED_SCOPE_ROWS = 5000;
+
     public function __construct(EntityFactory $entityFactory)
     {
         $this->entityFactory = $entityFactory;
+    }
+
+    /**
+     * Готує все потрібне для цілого списку товарів сталою кількістю запитів.
+     *
+     * Без цього кожна картка коштувала ~5 SQL (категорії, значення
+     * характеристик, два запити по скопах, вибірка кампаній), тобто на
+     * каталозі з 24 товарів — близько 120 запитів.
+     *
+     * @param array<int|string, mixed> $products масив товарів із getList()
+     */
+    public function prefetchForProducts(array $products): void
+    {
+        if ($this->prefetching) {
+            return;
+        }
+
+        $productIds = [];
+        foreach ($products as $product) {
+            if (!is_object($product)) {
+                continue;
+            }
+            $pid = (int) ($product->id ?? 0);
+            if ($pid > 0 && !isset($this->promoIdsCache[$pid])) {
+                $productIds[$pid] = $pid;
+                $this->listProducts[$pid] = $product;
+                // productCache свідомо не чіпаємо: він існує заради ПОВНОГО
+                // рядка товару (productForPurchase), а сюди приходять об'єкти
+                // з getList(), урізані за $excludedFields. Беремо лише те, що
+                // нам справді треба.
+                if (isset($product->main_image_id)) {
+                    $this->mainImageIdCache[$pid] = (int) $product->main_image_id;
+                }
+            }
+        }
+        if ($productIds === []) {
+            return;
+        }
+
+        $this->prefetching = true;
+        try {
+            $this->primeCategoryCache($productIds);
+            $this->primeFeatureValueCache($productIds);
+            if (!$this->primeScopeCache()) {
+                return; // забагато скопів — лишаємось на потоварному шляху
+            }
+
+            foreach ($productIds as $pid) {
+                $product = $this->listProducts[$pid] ?? null;
+                $this->promoIdsCache[$pid] = $this->matchPromoIds(
+                    $pid,
+                    (int) ($product->brand_id ?? 0),
+                    $this->categoryIdsForProduct($pid, $product),
+                    $this->featureValueIdsForProduct($pid)
+                );
+            }
+        } finally {
+            $this->prefetching = false;
+        }
+    }
+
+    /**
+     * @param array<int, int> $productIds
+     */
+    private function primeCategoryCache(array $productIds): void
+    {
+        $missing = array_values(array_diff($productIds, array_keys($this->categoryRowsCache)));
+        if ($missing === []) {
+            return;
+        }
+        // Порожній фільтр у getProductCategories() віддає ВСЮ таблицю зв'язків.
+        foreach ($missing as $pid) {
+            $this->categoryRowsCache[$pid] = [];
+        }
+
+        /** @var CategoriesEntity $categories */
+        $categories = $this->entityFactory->get(CategoriesEntity::class);
+        foreach ($categories->getProductCategories($missing) as $row) {
+            $pid = (int) ($row->product_id ?? 0);
+            if ($pid > 0 && !empty($row->category_id)) {
+                $this->categoryRowsCache[$pid][] = (int) $row->category_id;
+            }
+        }
+    }
+
+    /**
+     * @param array<int, int> $productIds
+     */
+    private function primeFeatureValueCache(array $productIds): void
+    {
+        $missing = array_values(array_diff($productIds, array_keys($this->featureValueCache)));
+        if ($missing === []) {
+            return;
+        }
+        foreach ($missing as $pid) {
+            $this->featureValueCache[$pid] = [];
+        }
+
+        /** @var FeaturesValuesEntity $fve */
+        $fve = $this->entityFactory->get(FeaturesValuesEntity::class);
+        foreach ($fve->getProductValuesIds($missing) as $row) {
+            $pid = (int) ($row->product_id ?? 0);
+            if ($pid > 0 && !empty($row->value_id)) {
+                $this->featureValueCache[$pid][] = (int) $row->value_id;
+            }
+        }
+    }
+
+    /**
+     * Читає таблицю скопів цілком. Коли вона в пам'яті, потоварний
+     * пре-фільтр «кандидатів» (два SQL на товар) стає непотрібним: він
+     * існував лише щоб не сканувати скопи.
+     *
+     * @return bool чи вдалося (false — таблиця завелика)
+     */
+    private function primeScopeCache(): bool
+    {
+        if ($this->scopeCacheComplete) {
+            return true;
+        }
+        if ($this->scopePrefetchDisabled) {
+            return false;
+        }
+
+        /** @var PromoScopeEntity $scope */
+        $scope = $this->entityFactory->get(PromoScopeEntity::class);
+
+        // Стелю перевіряємо зайвим рядком у вибірці, а не через count(): у
+        // sviat__promo_object немає колонки id, а Entity::count() рахує саме
+        // COUNT(DISTINCT alias.id).
+        $rows = $scope->find(['limit' => self::MAX_PREFETCHED_SCOPE_ROWS + 1]);
+        if (count($rows) > self::MAX_PREFETCHED_SCOPE_ROWS) {
+            // Запам'ятовуємо рішення: інакше кожен блок товарів на головній
+            // платив би за власну перевірку поверх потоварного шляху.
+            $this->scopePrefetchDisabled = true;
+            return false;
+        }
+
+        $grouped = [];
+        foreach ($rows as $row) {
+            $promoId = (int) ($row->promo_id ?? 0);
+            if ($promoId > 0) {
+                $grouped[$promoId][] = $row;
+            }
+        }
+        $this->scopeCache = $grouped;
+        $this->scopeCacheComplete = true;
+
+        if ($grouped !== []) {
+            /** @var PromoCampaignEntity $campaigns */
+            $campaigns = $this->entityFactory->get(PromoCampaignEntity::class);
+            foreach ($campaigns->noLimit()->find(['id' => array_keys($grouped), 'admin_list' => 1]) as $campaign) {
+                if (!empty($campaign->id)) {
+                    $this->excludeNoImageCache[(int) $campaign->id] = (int) ($campaign->exclude_no_image ?? 0);
+                    $this->campaignCache[(int) $campaign->id] = $campaign;
+                }
+            }
+            // Скоп без кампанії — позначаємо як відомо відсутню, інакше
+            // getActiveCampaigns() щоразу відкочувався б на запит.
+            foreach (array_keys($grouped) as $promoId) {
+                if (!array_key_exists($promoId, $this->campaignCache)) {
+                    $this->campaignCache[$promoId] = false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function matchPromoIds(int $productId, int $brandId, array $categoryIds, array $productValueIds): array
+    {
+        $matched = [];
+        foreach (array_keys($this->scopeCache) as $promoId) {
+            if ($this->productMatchesCampaignByData((int) $promoId, $productId, $brandId, $categoryIds, $productValueIds)) {
+                $matched[] = (int) $promoId;
+            }
+        }
+
+        return $matched;
     }
 
     /**
@@ -49,6 +261,13 @@ class PromotionEligibility
         $this->productCache      = [];
         $this->featureValueCache = [];
         $this->excludeNoImageCache = [];
+        $this->categoryRowsCache = [];
+        $this->promoIdsCache     = [];
+        $this->campaignCache     = [];
+        $this->mainImageIdCache  = [];
+        $this->listProducts      = [];
+        $this->scopeCacheComplete = false;
+        $this->scopePrefetchDisabled = false;
     }
 
     /**
@@ -75,6 +294,9 @@ class PromotionEligibility
     {
         if ($productId < 1) {
             return 0;
+        }
+        if (isset($this->mainImageIdCache[$productId])) {
+            return $this->mainImageIdCache[$productId];
         }
         $product = $this->productCache[$productId] ?? null;
         if ($product !== null) {
@@ -264,7 +486,23 @@ class PromotionEligibility
             }, $allowedTypes);
         }
 
-        $found = $campaigns->find(['id' => $promoIds, 'admin_list' => 1]);
+        // Префетч уже поклав кампанії в пам'ять — інакше цей запит виконувався б
+        // на кожну картку товару (плагін бейджа кличе pickBestActiveCampaign).
+        // Кеш попозиційний і зберігає false для відомо відсутніх: інакше один
+        // осиротілий рядок скопу (кампанію видалили повз CampaignRepository)
+        // вимикав би кеш цілком і повертав запит на кожну картку.
+        $cachedAll = [];
+        foreach ($promoIds as $promoId) {
+            if (!array_key_exists($promoId, $this->campaignCache)) {
+                $cachedAll = null;
+                break;
+            }
+            if ($this->campaignCache[$promoId] !== false) {
+                $cachedAll[] = $this->campaignCache[$promoId];
+            }
+        }
+
+        $found = $cachedAll ?? $campaigns->find(['id' => $promoIds, 'admin_list' => 1]);
 
         $candidates = [];
         foreach ($found as $c) {
@@ -405,9 +643,16 @@ class PromotionEligibility
     public function scopeRowsForCampaign(int $campaignId): array
     {
         if (!isset($this->scopeCache[$campaignId])) {
+            // Кеш повний — відсутність ключа означає «скопів немає», а не
+            // «ще не завантажили».
+            if ($this->scopeCacheComplete) {
+                return [];
+            }
             /** @var PromoScopeEntity $scope */
             $scope = $this->entityFactory->get(PromoScopeEntity::class);
-            $rows = $scope->find(['promo_id' => $campaignId]);
+            // noLimit(): дефолтні 100 рядків мовчки обрізали б скоп, а обрізані
+            // рядки ВИКЛЮЧЕННЯ означали б знижку тим, кого мали виключити.
+            $rows = $scope->noLimit()->find(['promo_id' => $campaignId]);
             $this->scopeCache[$campaignId] = is_array($rows) ? $rows : [];
         }
 
@@ -444,16 +689,26 @@ class PromotionEligibility
     public function promoIdsForProduct(object $product): array
     {
         $productId   = (int) $product->id;
+        if (isset($this->promoIdsCache[$productId])) {
+            return $this->promoIdsCache[$productId];
+        }
+
         $brandId     = (int) ($product->brand_id ?? 0);
         $categoryIds = $this->categoryIdsForProduct($productId, $product);
         $productValueIds = $this->featureValueIdsForProduct($productId);
+
+        // Скопи вже цілком у пам'яті — пре-фільтр кандидатів не потрібен.
+        if ($this->scopeCacheComplete) {
+            return $this->promoIdsCache[$productId]
+                = $this->matchPromoIds($productId, $brandId, $categoryIds, $productValueIds);
+        }
 
         /** @var PromoScopeEntity $scope */
         $scope = $this->entityFactory->get(PromoScopeEntity::class);
 
         $candidatePromoIds = $scope->findPromoIdsForProduct($productId, $brandId, $categoryIds);
         if ($candidatePromoIds === []) {
-            return [];
+            return $this->promoIdsCache[$productId] = [];
         }
 
         $matchedPromoIds = [];
@@ -467,7 +722,10 @@ class PromotionEligibility
             }
         }
 
-        return array_values(array_unique($matchedPromoIds));
+        // Мемоїзуємо й тут: на сторінці товару префетчу немає, а результат
+        // питають PromoProductDisplayService, GiftBadgePlugin і блок кампанії —
+        // без цього кожен повторював обидва запити findPromoIdsForProduct().
+        return $this->promoIdsCache[$productId] = array_values(array_unique($matchedPromoIds));
     }
 
     /**
@@ -483,12 +741,14 @@ class PromotionEligibility
             $ids[] = (int) $product->main_category_id;
         }
 
-        /** @var CategoriesEntity $categories */
-        $categories = $this->entityFactory->get(CategoriesEntity::class);
-        foreach ($categories->getProductCategories([$productId]) as $row) {
-            if (!empty($row->category_id)) {
-                $ids[] = (int) $row->category_id;
-            }
+        // main_category_id домішуємо щоразу, а кешуємо лише рядки зв'язків:
+        // так кеш не залежить від того, який об'єкт товару передали.
+        if (!isset($this->categoryRowsCache[$productId])) {
+            $this->primeCategoryCache([$productId => $productId]);
+        }
+
+        foreach ($this->categoryRowsCache[$productId] as $categoryId) {
+            $ids[] = (int) $categoryId;
         }
 
         return array_values(array_unique(array_filter($ids)));
@@ -619,6 +879,15 @@ class PromotionEligibility
                     return false;
                 }
             }
+        }
+
+        // Рядки є, але жоден не придатний (object_id = 0, невідомий type,
+        // feature_value без feature_id) — це не «умов немає, отже підходить
+        // усе». Раніше такі кампанії відсікав SQL-пре-фільтр, який вимагав
+        // збігу object_id; без цієї перевірки кампанія з порожнім скопом
+        // застосувалася б до всього каталогу.
+        if (empty($products) && empty($brands) && empty($categories) && empty($featureGroups)) {
+            return false;
         }
 
         return true;

@@ -38,8 +38,7 @@ class AdminOrderPromoApplierTest extends PromoTestCase
 
         $applier->rememberAddedPurchase(101, $purchase);
 
-        $ref = new \ReflectionProperty(AdminOrderPromoApplier::class, 'newPurchases');
-        if (PHP_VERSION_ID < 80100) { $ref->setAccessible(true); }
+        $ref = self::accessible(new \ReflectionProperty(AdminOrderPromoApplier::class, 'newPurchases'));
         $state = $ref->getValue($applier);
 
         self::assertSame([101 => [
@@ -57,8 +56,7 @@ class AdminOrderPromoApplierTest extends PromoTestCase
         $applier->rememberAddedPurchase(0, (object) ['product_id' => 5]);
         $applier->rememberAddedPurchase(null, (object) ['product_id' => 5]);
 
-        $ref = new \ReflectionProperty(AdminOrderPromoApplier::class, 'newPurchases');
-        if (PHP_VERSION_ID < 80100) { $ref->setAccessible(true); }
+        $ref = self::accessible(new \ReflectionProperty(AdminOrderPromoApplier::class, 'newPurchases'));
         self::assertSame([], $ref->getValue($applier));
     }
 
@@ -112,8 +110,7 @@ class AdminOrderPromoApplierTest extends PromoTestCase
         $applier->applyPromosToNewPurchases(null, (object) ['id' => 17106]);
 
         // State must be cleared after run.
-        $ref = new \ReflectionProperty(AdminOrderPromoApplier::class, 'newPurchases');
-        if (PHP_VERSION_ID < 80100) { $ref->setAccessible(true); }
+        $ref = self::accessible(new \ReflectionProperty(AdminOrderPromoApplier::class, 'newPurchases'));
         self::assertSame([], $ref->getValue($applier));
     }
 
@@ -193,8 +190,7 @@ class AdminOrderPromoApplierTest extends PromoTestCase
             $applier->applyPromosToNewPurchases(null, (object) ['id' => 17106]);
             self::fail('Expected exception');
         } catch (\RuntimeException $e) {
-            $ref = new \ReflectionProperty(AdminOrderPromoApplier::class, 'newPurchases');
-            if (PHP_VERSION_ID < 80100) { $ref->setAccessible(true); }
+            $ref = self::accessible(new \ReflectionProperty(AdminOrderPromoApplier::class, 'newPurchases'));
             self::assertSame([], $ref->getValue($applier), 'state must be cleared even on error');
         }
     }

@@ -24,8 +24,7 @@ class CartDiscountPipelineTest extends PromoTestCase
     private function invokeNormalize(CartDiscountPipeline $pipeline, Cart $cart): void
     {
         $ref = new \ReflectionClass($pipeline);
-        $m = $ref->getMethod('normalizeAppliedPromoRounding');
-        if (PHP_VERSION_ID < 80100) { $m->setAccessible(true); }
+        $m = self::accessible($ref->getMethod('normalizeAppliedPromoRounding'));
         $m->invoke($pipeline, $cart);
     }
 
