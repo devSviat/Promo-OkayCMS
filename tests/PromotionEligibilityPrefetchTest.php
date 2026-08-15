@@ -153,6 +153,47 @@ class PromotionEligibilityPrefetchTest extends TestCase
     }
 
     /**
+     * Непридатний рядок-виняток — це зіпсовані дані, а не «виняток порожній,
+     * отже його немає». Пропустити його означало б віддати знижку товару,
+     * який менеджер намагався виключити. Кампанія, що перестала працювати,
+     * помітна одразу; зайва знижка спливає аж на звірці.
+     */
+    public function testCampaignWithOnlyUnusableExclusionRowsMatchesNothing(): void
+    {
+        $scopeRows = [
+            (object) ['promo_id' => 5, 'type' => 'category', 'object_id' => 18, 'exclude' => 0],
+            (object) ['promo_id' => 5, 'type' => 'product',  'object_id' => 0,  'exclude' => 1],
+        ];
+        $campaigns = [(object) ['id' => 5, 'visible' => 1, 'exclude_no_image' => 0, 'promo_type' => 'percent']];
+
+        $eligibility = $this->makeEligibility($scopeRows, $campaigns);
+        $products = $this->products(2);
+        $eligibility->prefetchForProducts($products);
+
+        foreach ($products as $product) {
+            $this->assertSame([], $eligibility->promoIdsForProduct($product));
+        }
+    }
+
+    /** Те саме для нерозпізнаного type у рядку-винятку. */
+    public function testCampaignWithUnknownExclusionTypeMatchesNothing(): void
+    {
+        $scopeRows = [
+            (object) ['promo_id' => 5, 'type' => 'category', 'object_id' => 18, 'exclude' => 0],
+            (object) ['promo_id' => 5, 'type' => 'whatever', 'object_id' => 42, 'exclude' => 1],
+        ];
+        $campaigns = [(object) ['id' => 5, 'visible' => 1, 'exclude_no_image' => 0, 'promo_type' => 'percent']];
+
+        $eligibility = $this->makeEligibility($scopeRows, $campaigns);
+        $products = $this->products(2);
+        $eligibility->prefetchForProducts($products);
+
+        foreach ($products as $product) {
+            $this->assertSame([], $eligibility->promoIdsForProduct($product));
+        }
+    }
+
+    /**
      * Раніше такий рядок відсікався SQL-пре-фільтром: findPromoIdsForProduct()
      * вимагав збігу object_id, тож кампанія не потрапляла в кандидати. Після
      * переходу на матчинг у пам'яті непридатні рядки просто пропускаються —

@@ -815,11 +815,16 @@ class PromotionEligibility
             }
         }
 
-        if (!$this->matchesRowsByAndLogic($inclusions, $productId, $brandId, $categoryIds, $productValueIds)) {
+        // Скоп, у якому жоден рядок не придатний, для двох сторін означає
+        // протилежне. Включення не застосовується ні до чого, інакше кампанія
+        // з порожнім скопом накрила б увесь каталог. Виняток, навпаки,
+        // виключає все: зіпсований рядок — це помилка даних, а зайва знижка
+        // коштує дорожче за кампанію, яка перестала працювати.
+        if (!$this->matchesRowsByAndLogic($inclusions, $productId, $brandId, $categoryIds, $productValueIds, false)) {
             return false;
         }
 
-        if (!empty($exclusions) && $this->matchesRowsByAndLogic($exclusions, $productId, $brandId, $categoryIds, $productValueIds)) {
+        if (!empty($exclusions) && $this->matchesRowsByAndLogic($exclusions, $productId, $brandId, $categoryIds, $productValueIds, true)) {
             return false;
         }
 
@@ -831,7 +836,8 @@ class PromotionEligibility
         int $productId,
         int $brandId,
         array $categoryIds,
-        array $productValueIds
+        array $productValueIds,
+        bool $matchWhenScopeUnusable
     ): bool {
         if (empty($rows)) {
             return false;
@@ -882,12 +888,10 @@ class PromotionEligibility
         }
 
         // Рядки є, але жоден не придатний (object_id = 0, невідомий type,
-        // feature_value без feature_id) — це не «умов немає, отже підходить
-        // усе». Раніше такі кампанії відсікав SQL-пре-фільтр, який вимагав
-        // збігу object_id; без цієї перевірки кампанія з порожнім скопом
-        // застосувалася б до всього каталогу.
+        // feature_value без feature_id). Що це означає, вирішує сторона, яка
+        // питає, — див. виклики.
         if (empty($products) && empty($brands) && empty($categories) && empty($featureGroups)) {
-            return false;
+            return $matchWhenScopeUnusable;
         }
 
         return true;
