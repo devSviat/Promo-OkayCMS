@@ -19,6 +19,12 @@ class ProductsPromoFilter extends AbstractModuleEntityFilter
      * - Якщо обрано бренди: товар одного з них
      * - І між типами (якщо обрано більше одного типу)
      * - І товар не у виключеннях
+     *
+     * Скоп по характеристиках рахується по spo.feature_id, а не по приєднаному
+     * __features_values: рядок скопу переживає видалення свого значення, і
+     * приєднання зробило б його невидимим одразу для обох COUNT — порівняння
+     * виродилось би в 0 = 0. Те саме джерело істини використовує
+     * PromotionEligibility, який рахує ціну на картці й у кошику.
      */
     private function discountedWhereSql(): string
     {
@@ -81,18 +87,16 @@ class ProductsPromoFilter extends AbstractModuleEntityFilter
                   )
                   AND (
                     CASE
-                        WHEN EXISTS (SELECT 1 FROM __sviat__promo_object spo WHERE spo.promo_id = sp.id AND spo.exclude = 0 AND spo.type = \'feature_value\')
+                        WHEN EXISTS (SELECT 1 FROM __sviat__promo_object spo WHERE spo.promo_id = sp.id AND spo.exclude = 0 AND spo.type = \'feature_value\' AND spo.feature_id > 0)
                         THEN (
-                            SELECT COUNT(DISTINCT fv_chk.feature_id)
+                            SELECT COUNT(DISTINCT spo_fv.feature_id)
                             FROM __sviat__promo_object spo_fv
-                            INNER JOIN __features_values fv_chk ON fv_chk.id = spo_fv.object_id
-                            WHERE spo_fv.promo_id = sp.id AND spo_fv.exclude = 0 AND spo_fv.type = \'feature_value\'
+                            WHERE spo_fv.promo_id = sp.id AND spo_fv.exclude = 0 AND spo_fv.type = \'feature_value\' AND spo_fv.feature_id > 0
                               AND spo_fv.object_id IN (SELECT pfv.value_id FROM __products_features_values pfv WHERE pfv.product_id = p.id)
                         ) = (
-                            SELECT COUNT(DISTINCT fv_total.feature_id)
+                            SELECT COUNT(DISTINCT spo_total.feature_id)
                             FROM __sviat__promo_object spo_total
-                            INNER JOIN __features_values fv_total ON fv_total.id = spo_total.object_id
-                            WHERE spo_total.promo_id = sp.id AND spo_total.exclude = 0 AND spo_total.type = \'feature_value\'
+                            WHERE spo_total.promo_id = sp.id AND spo_total.exclude = 0 AND spo_total.type = \'feature_value\' AND spo_total.feature_id > 0
                         )
                         ELSE 1
                     END = 1
@@ -140,18 +144,16 @@ class ProductsPromoFilter extends AbstractModuleEntityFilter
                     )
                     AND (
                         CASE
-                            WHEN EXISTS (SELECT 1 FROM __sviat__promo_object spo_excl_f WHERE spo_excl_f.promo_id = sp.id AND spo_excl_f.exclude = 1 AND spo_excl_f.type = \'feature_value\')
+                            WHEN EXISTS (SELECT 1 FROM __sviat__promo_object spo_excl_f WHERE spo_excl_f.promo_id = sp.id AND spo_excl_f.exclude = 1 AND spo_excl_f.type = \'feature_value\' AND spo_excl_f.feature_id > 0)
                             THEN (
-                                SELECT COUNT(DISTINCT fv_chk.feature_id)
+                                SELECT COUNT(DISTINCT spo_fv.feature_id)
                                 FROM __sviat__promo_object spo_fv
-                                INNER JOIN __features_values fv_chk ON fv_chk.id = spo_fv.object_id
-                                WHERE spo_fv.promo_id = sp.id AND spo_fv.exclude = 1 AND spo_fv.type = \'feature_value\'
+                                WHERE spo_fv.promo_id = sp.id AND spo_fv.exclude = 1 AND spo_fv.type = \'feature_value\' AND spo_fv.feature_id > 0
                                   AND spo_fv.object_id IN (SELECT pfv.value_id FROM __products_features_values pfv WHERE pfv.product_id = p.id)
                             ) = (
-                                SELECT COUNT(DISTINCT fv_total.feature_id)
+                                SELECT COUNT(DISTINCT spo_total.feature_id)
                                 FROM __sviat__promo_object spo_total
-                                INNER JOIN __features_values fv_total ON fv_total.id = spo_total.object_id
-                                WHERE spo_total.promo_id = sp.id AND spo_total.exclude = 1 AND spo_total.type = \'feature_value\'
+                                WHERE spo_total.promo_id = sp.id AND spo_total.exclude = 1 AND spo_total.type = \'feature_value\' AND spo_total.feature_id > 0
                             )
                             ELSE 1
                         END = 1
@@ -206,19 +208,18 @@ class ProductsPromoFilter extends AbstractModuleEntityFilter
             ELSE 1
         END';
 
+        // Групи характеристик рахуються по spo.feature_id — див. discountedWhereSql().
         $featureValueCheck = "CASE
-    WHEN EXISTS (SELECT 1 FROM __sviat__promo_object spo WHERE spo.promo_id = :sv_promo_cid AND spo.exclude = 0 AND spo.type = 'feature_value')
+    WHEN EXISTS (SELECT 1 FROM __sviat__promo_object spo WHERE spo.promo_id = :sv_promo_cid AND spo.exclude = 0 AND spo.type = 'feature_value' AND spo.feature_id > 0)
     THEN (
-        SELECT COUNT(DISTINCT fv_chk.feature_id)
+        SELECT COUNT(DISTINCT spo_fv.feature_id)
         FROM __sviat__promo_object spo_fv
-        INNER JOIN __features_values fv_chk ON fv_chk.id = spo_fv.object_id
-        WHERE spo_fv.promo_id = :sv_promo_cid AND spo_fv.exclude = 0 AND spo_fv.type = 'feature_value'
+        WHERE spo_fv.promo_id = :sv_promo_cid AND spo_fv.exclude = 0 AND spo_fv.type = 'feature_value' AND spo_fv.feature_id > 0
           AND spo_fv.object_id IN (SELECT pfv.value_id FROM __products_features_values pfv WHERE pfv.product_id = p.id)
     ) = (
-        SELECT COUNT(DISTINCT fv_total.feature_id)
+        SELECT COUNT(DISTINCT spo_total.feature_id)
         FROM __sviat__promo_object spo_total
-        INNER JOIN __features_values fv_total ON fv_total.id = spo_total.object_id
-        WHERE spo_total.promo_id = :sv_promo_cid AND spo_total.exclude = 0 AND spo_total.type = 'feature_value'
+        WHERE spo_total.promo_id = :sv_promo_cid AND spo_total.exclude = 0 AND spo_total.type = 'feature_value' AND spo_total.feature_id > 0
     )
     ELSE 1
 END";
@@ -258,18 +259,16 @@ END";
 END";
 
         $excludeFeatureValueCheck = "CASE
-    WHEN EXISTS (SELECT 1 FROM __sviat__promo_object spo WHERE spo.promo_id = :sv_promo_cid AND spo.exclude = 1 AND spo.type = 'feature_value')
+    WHEN EXISTS (SELECT 1 FROM __sviat__promo_object spo WHERE spo.promo_id = :sv_promo_cid AND spo.exclude = 1 AND spo.type = 'feature_value' AND spo.feature_id > 0)
     THEN (
-        SELECT COUNT(DISTINCT fv_chk.feature_id)
+        SELECT COUNT(DISTINCT spo_fv.feature_id)
         FROM __sviat__promo_object spo_fv
-        INNER JOIN __features_values fv_chk ON fv_chk.id = spo_fv.object_id
-        WHERE spo_fv.promo_id = :sv_promo_cid AND spo_fv.exclude = 1 AND spo_fv.type = 'feature_value'
+        WHERE spo_fv.promo_id = :sv_promo_cid AND spo_fv.exclude = 1 AND spo_fv.type = 'feature_value' AND spo_fv.feature_id > 0
           AND spo_fv.object_id IN (SELECT pfv.value_id FROM __products_features_values pfv WHERE pfv.product_id = p.id)
     ) = (
-        SELECT COUNT(DISTINCT fv_total.feature_id)
+        SELECT COUNT(DISTINCT spo_total.feature_id)
         FROM __sviat__promo_object spo_total
-        INNER JOIN __features_values fv_total ON fv_total.id = spo_total.object_id
-        WHERE spo_total.promo_id = :sv_promo_cid AND spo_total.exclude = 1 AND spo_total.type = 'feature_value'
+        WHERE spo_total.promo_id = :sv_promo_cid AND spo_total.exclude = 1 AND spo_total.type = 'feature_value' AND spo_total.feature_id > 0
     )
     ELSE 1
 END";
