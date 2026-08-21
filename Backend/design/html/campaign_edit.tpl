@@ -91,7 +91,7 @@
 
     <div class="row">
         <div class="col-xs-12">
-            <div class="boxed match_matchHeight_true fn_toggle_wrap">
+            <div class="boxed fn_toggle_wrap">
 
                 {* ── Заголовок: назва секції + перемикач «Активна» напроти + згортання ── *}
                 <div class="heading_box heading_box--switch-right">
@@ -901,7 +901,7 @@
                 if (typeof showFor === 'undefined' || showFor === '') {
                     return;
                 }
-                var types = String(showFor).split(',').map(function(s) { return $.trim(s); });
+                var types = String(showFor).split(',').map(function(s) { return s.trim(); });
                 $(this).toggle(types.indexOf(v) !== -1);
             });
         }
