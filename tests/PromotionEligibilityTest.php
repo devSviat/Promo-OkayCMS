@@ -12,7 +12,7 @@ class PromotionEligibilityTest extends PromoTestCase
 {
     private function makeEligibility(?EntityFactory $factory = null): PromotionEligibility
     {
-        return new PromotionEligibility($factory ?? $this->createMock(EntityFactory::class));
+        return new PromotionEligibility($factory ?? $this->createStub(EntityFactory::class));
     }
 
     public function testCampaignDatesOkWhenNoDateRange(): void
@@ -58,7 +58,7 @@ class PromotionEligibilityTest extends PromoTestCase
     {
         $e = $this->makeEligibility();
 
-        $cart = $this->createMock(Cart::class);
+        $cart = $this->createStub(Cart::class);
         $purchase1 = $this->buildPurchase(['price' => 100, 'amount' => 2]);
         $purchase2 = $this->buildPurchase(['variant' => (object) ['gift_product_id' => 5, 'price' => 50]]);
         $cart->purchases = [$purchase1, $purchase2];
@@ -69,7 +69,7 @@ class PromotionEligibilityTest extends PromoTestCase
     public function testMinOrderSatisfiedTrueWhenNoThreshold(): void
     {
         $e = $this->makeEligibility();
-        $cart = $this->createMock(Cart::class);
+        $cart = $this->createStub(Cart::class);
         $cart->purchases = [];
         self::assertTrue($e->minOrderSatisfied($this->buildPromo(['min_order_amount' => 0]), $cart));
     }
@@ -77,14 +77,14 @@ class PromotionEligibilityTest extends PromoTestCase
     public function testMinOrderSatisfiedFalseWhenBelowThreshold(): void
     {
         $e = $this->makeEligibility();
-        $cart = $this->createMock(Cart::class);
+        $cart = $this->createStub(Cart::class);
         $cart->purchases = [$this->buildPurchase(['price' => 50, 'amount' => 1])];
         self::assertFalse($e->minOrderSatisfied($this->buildPromo(['min_order_amount' => 200]), $cart));
     }
 
     public function testPurchaseMatchesCampaignSkipsProductWithoutImageWhenFlagOn(): void
     {
-        $productsEntity = $this->createMock(\Okay\Entities\ProductsEntity::class);
+        $productsEntity = $this->createStub(\Okay\Entities\ProductsEntity::class);
         $productsEntity->method('get')->willReturnCallback(function (int $id): ?object {
             if ($id === 100) {
                 return (object) ['id' => 100, 'main_image_id' => 0, 'brand_id' => 0];
@@ -95,23 +95,23 @@ class PromotionEligibilityTest extends PromoTestCase
             return null;
         });
 
-        $campaignsEntity = $this->createMock(\Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity::class);
+        $campaignsEntity = $this->createStub(\Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity::class);
         $campaignsEntity->method('findOne')->willReturn($this->buildPromo([
             'id' => 5,
             'exclude_no_image' => 1,
         ]));
 
-        $scopeEntity = $this->createMock(\Okay\Modules\Sviat\Promo\Entities\PromoScopeEntity::class);
+        $scopeEntity = $this->createStub(\Okay\Modules\Sviat\Promo\Entities\PromoScopeEntity::class);
         $scopeEntity->method('noLimit')->willReturnSelf();
         $scopeEntity->method('find')->willReturn([
             (object) ['promo_id' => 5, 'type' => 'product', 'object_id' => 100, 'exclude' => 0],
             (object) ['promo_id' => 5, 'type' => 'product', 'object_id' => 200, 'exclude' => 0],
         ]);
 
-        $categoriesEntity = $this->createMock(\Okay\Entities\CategoriesEntity::class);
+        $categoriesEntity = $this->createStub(\Okay\Entities\CategoriesEntity::class);
         $categoriesEntity->method('getProductCategories')->willReturn([]);
 
-        $featuresValuesEntity = $this->createMock(\Okay\Entities\FeaturesValuesEntity::class);
+        $featuresValuesEntity = $this->createStub(\Okay\Entities\FeaturesValuesEntity::class);
         $featuresValuesEntity->method('getProductValuesIds')->willReturn([]);
 
         $factory = $this->mockEntityFactory([

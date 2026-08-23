@@ -13,7 +13,7 @@ class CartDiscountPipelineTest extends PromoTestCase
 {
     private function makePipeline(int $cents): CartDiscountPipeline
     {
-        $eligibility = $this->createMock(PromotionEligibility::class);
+        $eligibility = $this->createStub(PromotionEligibility::class);
         $eligibility->method('lineIsBonusGift')->willReturn(false);
         $factory = $this->mockEntityFactory([
             CurrenciesEntity::class => $this->mockCurrenciesEntity($cents),
@@ -42,7 +42,7 @@ class CartDiscountPipelineTest extends PromoTestCase
         $purchase->meta->total_price = 299.98;
         $purchase->meta->undiscounted_total_price = 399.98;
 
-        $cart = $this->createMock(Cart::class);
+        $cart = $this->createStub(Cart::class);
         $cart->purchases = [$purchase];
 
         $this->invokeNormalize($pipeline, $cart);
@@ -67,7 +67,7 @@ class CartDiscountPipelineTest extends PromoTestCase
         $purchase->meta->total_price = 299.98;
         $purchase->meta->undiscounted_total_price = 399.98;
 
-        $cart = $this->createMock(Cart::class);
+        $cart = $this->createStub(Cart::class);
         $cart->purchases = [$purchase];
 
         $this->invokeNormalize($pipeline, $cart);
@@ -87,7 +87,7 @@ class CartDiscountPipelineTest extends PromoTestCase
         ]);
         $purchase->meta->total_price = 149.99;
 
-        $cart = $this->createMock(Cart::class);
+        $cart = $this->createStub(Cart::class);
         $cart->purchases = [$purchase];
 
         $this->invokeNormalize($pipeline, $cart);

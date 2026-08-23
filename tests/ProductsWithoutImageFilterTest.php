@@ -21,7 +21,7 @@ class ProductsWithoutImageFilterTest extends PromoTestCase
 
     public function testKeepsOnlyProductsWithImage(): void
     {
-        $products = $this->createMock(ProductsEntity::class);
+        $products = $this->createStub(ProductsEntity::class);
         $products->method('find')->willReturn([
             (object) ['id' => 1, 'main_image_id' => 10],
             (object) ['id' => 2, 'main_image_id' => 0],

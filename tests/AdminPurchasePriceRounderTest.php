@@ -57,10 +57,12 @@ class AdminPurchasePriceRounderTest extends PromoTestCase
 
     public function testDefaultsToTwoDecimalsWhenCurrencyMissing(): void
     {
+        // createConfiguredStub() зʼявився після PHPUnit 9.5, а модуль їде і на стоку.
+        $noCurrency = $this->createStub(CurrenciesEntity::class);
+        $noCurrency->method('getMainCurrency')->willReturn((object) []);
+
         $factory = $this->mockEntityFactory([
-            CurrenciesEntity::class => $this->createConfiguredMock(CurrenciesEntity::class, [
-                'getMainCurrency' => (object) [],
-            ]),
+            CurrenciesEntity::class => $noCurrency,
         ]);
         $rounder = new AdminPurchasePriceRounder($factory);
 

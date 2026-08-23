@@ -14,8 +14,8 @@ class PromoFeedPriceResolverTest extends PromoTestCase
 {
     private function makeResolver(int $cents = 2): PromoFeedPriceResolver
     {
-        $eligibility = $this->createMock(PromotionEligibility::class);
-        $queryFactory = $this->createMock(QueryFactory::class);
+        $eligibility = $this->createStub(PromotionEligibility::class);
+        $queryFactory = $this->createStub(QueryFactory::class);
         $entityFactory = $this->mockEntityFactory([
             CurrenciesEntity::class => $this->mockCurrenciesEntity($cents),
         ]);

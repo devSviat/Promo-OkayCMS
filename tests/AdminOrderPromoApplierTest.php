@@ -16,10 +16,10 @@ class AdminOrderPromoApplierTest extends PromoTestCase
 {
     private function makeApplier(int $cents = 0, ?PromotionEligibility $eligibility = null, ?ProductsEntity $products = null, ?DiscountsEntity $discounts = null, ?PurchasesEntity $purchases = null): AdminOrderPromoApplier
     {
-        $eligibility = $eligibility ?? $this->createMock(PromotionEligibility::class);
-        $products    = $products    ?? $this->createMock(ProductsEntity::class);
-        $discounts   = $discounts   ?? $this->createMock(DiscountsEntity::class);
-        $purchases   = $purchases   ?? $this->createMock(PurchasesEntity::class);
+        $eligibility = $eligibility ?? $this->createStub(PromotionEligibility::class);
+        $products    = $products    ?? $this->createStub(ProductsEntity::class);
+        $discounts   = $discounts   ?? $this->createStub(DiscountsEntity::class);
+        $purchases   = $purchases   ?? $this->createStub(PurchasesEntity::class);
 
         $factory = $this->mockEntityFactory([
             CurrenciesEntity::class => $this->mockCurrenciesEntity($cents),
@@ -71,11 +71,11 @@ class AdminOrderPromoApplierTest extends PromoTestCase
 
     public function testApplyPercentPromoCreatesDiscountAndUpdatesPrice(): void
     {
-        $products = $this->createMock(ProductsEntity::class);
+        $products = $this->createStub(ProductsEntity::class);
         $product  = (object) ['id' => 5, 'brand_id' => 0, 'main_image_id' => 11, 'main_category_id' => 0];
         $products->method('get')->willReturnCallback(fn ($id) => $id === 5 ? $product : null);
 
-        $eligibility = $this->createMock(PromotionEligibility::class);
+        $eligibility = $this->createStub(PromotionEligibility::class);
         $eligibility->method('promoIdsForProduct')->willReturnCallback(fn ($p) => $p === $product ? [7] : []);
         $eligibility->method('getActiveCampaigns')->willReturn([
             $this->buildPromo([
@@ -116,11 +116,11 @@ class AdminOrderPromoApplierTest extends PromoTestCase
 
     public function testApplyFixedPromoCreatesAbsoluteDiscount(): void
     {
-        $products = $this->createMock(ProductsEntity::class);
+        $products = $this->createStub(ProductsEntity::class);
         $product  = (object) ['id' => 5, 'brand_id' => 0, 'main_image_id' => 11, 'main_category_id' => 0];
         $products->method('get')->willReturn($product);
 
-        $eligibility = $this->createMock(PromotionEligibility::class);
+        $eligibility = $this->createStub(PromotionEligibility::class);
         $eligibility->method('promoIdsForProduct')->willReturn([8]);
         $eligibility->method('getActiveCampaigns')->willReturn([
             $this->buildPromo([
@@ -151,10 +151,10 @@ class AdminOrderPromoApplierTest extends PromoTestCase
 
     public function testApplyPromoSkipsWhenNoActiveCampaign(): void
     {
-        $products = $this->createMock(ProductsEntity::class);
+        $products = $this->createStub(ProductsEntity::class);
         $products->method('get')->willReturn((object) ['id' => 5, 'main_image_id' => 11]);
 
-        $eligibility = $this->createMock(PromotionEligibility::class);
+        $eligibility = $this->createStub(PromotionEligibility::class);
         $eligibility->method('promoIdsForProduct')->willReturn([]);
 
         $discounts = $this->createMock(DiscountsEntity::class);
@@ -171,16 +171,16 @@ class AdminOrderPromoApplierTest extends PromoTestCase
 
     public function testStateIsClearedEvenIfDiscountEntityThrows(): void
     {
-        $products = $this->createMock(ProductsEntity::class);
+        $products = $this->createStub(ProductsEntity::class);
         $products->method('get')->willReturn((object) ['id' => 5, 'main_image_id' => 11]);
 
-        $eligibility = $this->createMock(PromotionEligibility::class);
+        $eligibility = $this->createStub(PromotionEligibility::class);
         $eligibility->method('promoIdsForProduct')->willReturn([7]);
         $eligibility->method('getActiveCampaigns')->willReturn([
             $this->buildPromo(['id' => 7, 'promo_type' => PromoCampaignEntity::TYPE_PERCENT, 'discount_percent' => 10]),
         ]);
 
-        $discounts = $this->createMock(DiscountsEntity::class);
+        $discounts = $this->createStub(DiscountsEntity::class);
         $discounts->method('add')->willThrowException(new \RuntimeException('db fail'));
 
         $applier = $this->makeApplier(0, $eligibility, $products, $discounts);
