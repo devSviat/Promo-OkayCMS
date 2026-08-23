@@ -12,10 +12,11 @@ require_once __DIR__ . '/PromoTestCase.php';
 
 class PromoProductDisplayServiceTest extends PromoTestCase
 {
-    private function makeService(int $cents): array
+    /** Мок логера передають лише тести, які на нього чекають. */
+    private function makeService(int $cents, ?LoggerInterface $logger = null): array
     {
-        $eligibility = $this->createMock(PromotionEligibility::class);
-        $logger = $this->createMock(LoggerInterface::class);
+        $eligibility = $this->createStub(PromotionEligibility::class);
+        $logger = $logger ?? $this->createStub(LoggerInterface::class);
         $entityFactory = $this->mockEntityFactory([
             CurrenciesEntity::class => $this->mockCurrenciesEntity($cents),
         ]);
@@ -59,8 +60,9 @@ class PromoProductDisplayServiceTest extends PromoTestCase
 
     public function testApplyDiscountDisplayIgnoresZeroOrNegativeBasePrice(): void
     {
-        [$svc, $logger] = $this->makeService(2);
+        $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())->method('warning');
+        [$svc] = $this->makeService(2, $logger);
         $product = (object) ['id' => 1, 'variant' => (object) ['price' => 0]];
         $promo = $this->buildPromo();
 

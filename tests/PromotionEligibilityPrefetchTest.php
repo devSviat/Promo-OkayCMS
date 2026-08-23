@@ -24,7 +24,7 @@ class PromotionEligibilityPrefetchTest extends TestCase
     {
         $this->calls = ['categories' => 0, 'featureValues' => 0, 'scope' => 0, 'campaigns' => 0];
 
-        $categories = $this->createMock(CategoriesEntity::class);
+        $categories = $this->createStub(CategoriesEntity::class);
         $categories->method('getProductCategories')
             ->willReturnCallback(function ($ids) {
                 $this->calls['categories']++;
@@ -36,7 +36,7 @@ class PromotionEligibilityPrefetchTest extends TestCase
                 return $out;
             });
 
-        $featureValues = $this->createMock(FeaturesValuesEntity::class);
+        $featureValues = $this->createStub(FeaturesValuesEntity::class);
         $featureValues->method('getProductValuesIds')
             ->willReturnCallback(function ($ids) {
                 $this->calls['featureValues']++;
@@ -54,14 +54,14 @@ class PromotionEligibilityPrefetchTest extends TestCase
             return $scopeRows;
         });
 
-        $campaignEntity = $this->createMock(PromoCampaignEntity::class);
+        $campaignEntity = $this->createStub(PromoCampaignEntity::class);
         $campaignEntity->method('noLimit')->willReturnSelf();
         $campaignEntity->method('find')->willReturnCallback(function () use ($campaigns) {
             $this->calls['campaigns']++;
             return $campaigns;
         });
 
-        $entityFactory = $this->createMock(EntityFactory::class);
+        $entityFactory = $this->createStub(EntityFactory::class);
         $entityFactory->method('get')->willReturnCallback(
             function ($class) use ($categories, $featureValues, $scope, $campaignEntity) {
                 switch ($class) {
@@ -271,12 +271,12 @@ class PromotionEligibilityPrefetchTest extends TestCase
             ->with(['limit' => 5001])
             ->willReturn($overLimit);
 
-        $entityFactory = $this->createMock(EntityFactory::class);
+        $entityFactory = $this->createStub(EntityFactory::class);
         $entityFactory->method('get')->willReturnCallback(function ($class) use ($scope) {
             if ($class === PromoScopeEntity::class) {
                 return $scope;
             }
-            $stub = $this->createMock($class);
+            $stub = $this->createStub($class);
             if (method_exists($stub, 'getProductCategories')) {
                 $stub->method('getProductCategories')->willReturn([]);
             }

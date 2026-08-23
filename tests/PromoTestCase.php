@@ -34,7 +34,7 @@ abstract class PromoTestCase extends TestCase
      */
     protected function mockEntityFactory(array $entityMocks): EntityFactory
     {
-        $factory = $this->createMock(EntityFactory::class);
+        $factory = $this->createStub(EntityFactory::class);
         $factory->method('get')->willReturnCallback(function (string $class) use ($entityMocks) {
             return $entityMocks[$class] ?? null;
         });
@@ -46,7 +46,7 @@ abstract class PromoTestCase extends TestCase
      */
     protected function mockCurrenciesEntity(int $cents = 2): CurrenciesEntity
     {
-        $currencies = $this->createMock(CurrenciesEntity::class);
+        $currencies = $this->createStub(CurrenciesEntity::class);
         $currencies->method('getMainCurrency')->willReturn((object) ['id' => 1, 'cents' => $cents, 'rate_from' => 1, 'rate_to' => 1]);
         return $currencies;
     }
@@ -80,9 +80,9 @@ abstract class PromoTestCase extends TestCase
      */
     protected function buildPurchase(array $overrides = []): Purchase
     {
-        $purchase = $this->getMockBuilder(Purchase::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        // createStub, а не MockBuilder: конструктор він вимикає сам, а очікувань
+        // тут не ставлять — MockBuilder лише додавав нотис на кожен виклик.
+        $purchase = $this->createStub(Purchase::class);
 
         $defaults = [
             'product_id'         => 1,

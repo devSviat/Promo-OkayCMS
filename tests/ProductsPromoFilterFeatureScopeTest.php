@@ -25,7 +25,7 @@ class ProductsPromoFilterFeatureScopeTest extends TestCase
     private function capturedSql(string $method, $argument): array
     {
         $captured = [];
-        $select = $this->createMock(Select::class);
+        $select = $this->createStub(Select::class);
         $select->method('where')->willReturnCallback(function (...$args) use (&$captured) {
             $captured[] = (string) ($args[0] ?? '');
         });
