@@ -67,16 +67,16 @@ class CampaignLandingController extends AbstractController
         if (!$promo->is_expired && !$promo->is_upcoming) {
             $filter = ['in_campaign' => (int) $promo->id];
 
-            $itemsPerPage = $this->settings->get('products_num');
+            // page=all тут свідомо не підтримується: лендинг вантажив би всю
+            // кампанію одним запитом, а скоп по категорії чи бренду накриває
+            // тисячі товарів. Такий URL віддається як звичайна перша сторінка,
+            // canonical на ній і так веде на чистий адрес.
+            $itemsPerPage = max(1, (int) $this->settings->get('products_num'));
             $currentPage  = max(1, $this->request->get('page', 'integer'));
             $this->design->assign('current_page_num', $currentPage);
 
-            $productsCount = $productsEntity->count($filter);
-            if ($this->request->get('page') == 'all') {
-                $itemsPerPage = $productsCount;
-            }
-
-            $pagesNum = ceil($productsCount / $itemsPerPage);
+            $productsCount = (int) $productsEntity->count($filter);
+            $pagesNum = (int) ceil($productsCount / $itemsPerPage);
             $this->design->assign('total_pages_num', $pagesNum);
             $this->design->assign('total_products_num', $productsCount);
 
