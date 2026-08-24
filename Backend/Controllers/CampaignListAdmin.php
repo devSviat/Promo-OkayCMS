@@ -71,7 +71,10 @@ class CampaignListAdmin extends IndexAdmin
 
         $promos_count = $campaignRepository->countPromos($filter);
         if ($this->request->get('page') == 'all') {
-            $filter['limit'] = $promos_count;
+            // Стелі тут свідомо немає: список за авторизацією, а кампаній
+            // на порядки менше за товари. max(1) - бо без жодної кампанії
+            // ліміт ставав нулем і ділення нижче падало фаталом.
+            $filter['limit'] = max(1, (int) $promos_count);
         }
 
         $promos = $campaigns->find($filter);
