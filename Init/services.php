@@ -3,6 +3,7 @@
 use Psr\Log\LoggerInterface;
 use Okay\Core\OkayContainer\Reference\ServiceReference as SR;
 use Okay\Core\EntityFactory;
+use Okay\Core\Settings;
 use Okay\Core\Config;
 use Okay\Core\FrontTranslations;
 use Okay\Core\Image;
@@ -21,13 +22,14 @@ use Okay\Modules\Sviat\Promo\Services\PromoProductDisplayService;
 use Okay\Modules\Sviat\Promo\Services\PurchasePriceRounder;
 use Okay\Modules\Sviat\Promo\Services\AdminOrderPromoApplier;
 use Okay\Modules\Sviat\Promo\Services\AdminPurchasePriceRounder;
+use Okay\Modules\Sviat\Promo\Services\OptionalRedisInvalidation;
 use Okay\Modules\Sviat\Promo\Services\ProductsWithoutImageFilter;
+use Okay\Modules\Sviat\Promo\Services\PromoBoundaryWatcher;
 use Okay\Modules\Sviat\Promo\Extenders\PromoCampaignCacheInvalidator;
 use Okay\Modules\Sviat\Promo\Extenders\PromoCartHooks;
 use Okay\Modules\Sviat\Promo\Extenders\PromoFeedsExtender;
 use Okay\Modules\Sviat\Promo\Extenders\PromoGoogleMerchantExtender;
 use Okay\Modules\Sviat\Promo\Extenders\PromoProductsExtender;
-use Okay\Modules\Sviat\Redis\Services\RedisCacheService;
 
 return [
     CampaignPayloadRequest::class => [
@@ -139,6 +141,23 @@ return [
 
     PromoCampaignCacheInvalidator::class => [
         'class'     => PromoCampaignCacheInvalidator::class,
-        'arguments' => [new SR(RedisCacheService::class)],
+        'arguments' => [new SR(OptionalRedisInvalidation::class)],
+    ],
+
+    OptionalRedisInvalidation::class => [
+        'class'     => OptionalRedisInvalidation::class,
+        'arguments' => [],
+    ],
+
+    // Пізнє звʼязування з кешем, а не ServiceReference: задача крутиться в
+    // планувальнику щохвилини, і без Redis контейнер валив би кожен тік.
+    PromoBoundaryWatcher::class => [
+        'class'     => PromoBoundaryWatcher::class,
+        'arguments' => [
+            new SR(EntityFactory::class),
+            new SR(PromotionEligibility::class),
+            new SR(Settings::class),
+            new SR(OptionalRedisInvalidation::class),
+        ],
     ],
 ];

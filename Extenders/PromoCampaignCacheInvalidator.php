@@ -3,8 +3,7 @@
 namespace Okay\Modules\Sviat\Promo\Extenders;
 
 use Okay\Core\Modules\Extender\ExtensionInterface;
-use Okay\Modules\Sviat\Redis\Services\CacheTags;
-use Okay\Modules\Sviat\Redis\Services\RedisCacheService;
+use Okay\Modules\Sviat\Promo\Services\ProductCacheInvalidation;
 
 /**
  * Invalidate Redis caches when promo campaign or scope changes.
@@ -16,11 +15,11 @@ use Okay\Modules\Sviat\Redis\Services\RedisCacheService;
  */
 class PromoCampaignCacheInvalidator implements ExtensionInterface
 {
-    private RedisCacheService $redis;
+    private ProductCacheInvalidation $cache;
 
-    public function __construct(RedisCacheService $redis)
+    public function __construct(ProductCacheInvalidation $cache)
     {
-        $this->redis = $redis;
+        $this->cache = $cache;
     }
 
     public function onCampaignAdd($output, $object): void
@@ -55,8 +54,6 @@ class PromoCampaignCacheInvalidator implements ExtensionInterface
 
     private function bumpAll(): void
     {
-        // Discount/eligibility may affect every product card and every list.
-        $this->redis->bump(CacheTags::PRODUCTS_ALL);
-        $this->redis->bump(CacheTags::PRODUCTS_LIST);
+        $this->cache->invalidateProductData();
     }
 }

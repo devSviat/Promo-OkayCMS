@@ -6,6 +6,7 @@ use Okay\Core\Cart;
 use Okay\Core\Classes\Purchase;
 use Okay\Core\Modules\AbstractInit;
 use Okay\Core\Modules\EntityField;
+use Okay\Core\Scheduler\Schedule;
 use Okay\Entities\ProductsEntity;
 use Okay\Entities\PurchasesEntity;
 use Okay\Helpers\CartHelper;
@@ -32,6 +33,7 @@ use Okay\Modules\Sviat\Promo\Extenders\PromoCartHooks;
 use Okay\Modules\Sviat\Promo\Extenders\PromoFeedsExtender;
 use Okay\Modules\Sviat\Promo\Extenders\PromoGoogleMerchantExtender;
 use Okay\Modules\Sviat\Promo\Extenders\PromoProductsExtender;
+use Okay\Modules\Sviat\Promo\Services\PromoBoundaryWatcher;
 use Okay\Admin\Helpers\BackendOrdersHelper;
 use Okay\Modules\Sviat\Promo\Services\AdminOrderPromoApplier;
 use Okay\Modules\Sviat\Promo\Services\AdminPurchasePriceRounder;
@@ -287,6 +289,16 @@ class Init extends AbstractInit
         $this->registerQueueExtension(
             ['class' => PromoScopeEntity::class, 'method' => 'delete'],
             ['class' => PromoCampaignCacheInvalidator::class, 'method' => 'onScopeDelete']
+        );
+
+        // Кампанія вмикається й вимикається за датою, без жодного запису в
+        // базу, тож інвалідатор сутності цього переходу не бачить.
+        $this->registerSchedule(
+            (new Schedule([PromoBoundaryWatcher::class, 'invalidateWhenActiveSetChanges']))
+                ->name('Promo: invalidate cache on campaign window boundaries')
+                ->time('* * * * *')
+                ->overlap(false)
+                ->timeout(60)
         );
 
         // OkayCMS/Feeds
