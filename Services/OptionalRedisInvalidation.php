@@ -17,7 +17,7 @@ use Okay\Core\ServiceLocator;
  */
 final class OptionalRedisInvalidation implements ProductCacheInvalidation
 {
-    private const REDIS_CACHE_SERVICE_CLASS = 'Okay\\Modules\\Sviat\\Redis\\Services\\RedisCacheService';
+    private const string REDIS_CACHE_SERVICE_CLASS = \Okay\Modules\Sviat\Redis\Services\RedisCacheService::class;
 
     private bool $resolved = false;
 
@@ -56,7 +56,7 @@ final class OptionalRedisInvalidation implements ProductCacheInvalidation
                 return null;
             }
             $service = $serviceLocator->getService($redisClass);
-        } catch (\Throwable $e) {
+        } catch (\Throwable) {
             return null;
         }
 

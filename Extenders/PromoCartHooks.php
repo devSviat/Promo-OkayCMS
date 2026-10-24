@@ -235,7 +235,7 @@ class PromoCartHooks implements ExtensionInterface
             $sets = [];
         }
         foreach ($sets as $row) {
-            if (is_object($row) && isset($row->set) && strpos((string) $row->set, 'sviat_promo') !== false) {
+            if (is_object($row) && isset($row->set) && str_contains((string) $row->set, 'sviat_promo')) {
                 return $sets;
             }
         }
@@ -289,9 +289,7 @@ class PromoCartHooks implements ExtensionInterface
                     }
                     foreach ($rewardRows as $key2 => $row) {
                         $promoId = (int) $row->promo_id;
-                        if (!isset($campaignCache[$promoId])) {
-                            $campaignCache[$promoId] = $this->entityFactory->get(PromoCampaignEntity::class)->get($promoId);
-                        }
+                        $campaignCache[$promoId] ??= $this->entityFactory->get(PromoCampaignEntity::class)->get($promoId);
                         $campaign = $campaignCache[$promoId];
                         if (empty($campaign->id) || $campaign->promo_type !== PromoCampaignEntity::TYPE_GIFT) {
                             continue;
@@ -309,9 +307,7 @@ class PromoCartHooks implements ExtensionInterface
                         }
                         $product = $giftProductCache[$giftId];
 
-                        if (!isset($giftVariantCache[$giftId])) {
-                            $giftVariantCache[$giftId] = $this->variantsEntity->findOne(['product_id' => $product->id]);
-                        }
+                        $giftVariantCache[$giftId] ??= $this->variantsEntity->findOne(['product_id' => $product->id]);
                         $variant = clone $giftVariantCache[$giftId];
                         $variant->gift_price = $variant->price;
                         $variant->price = 0;
@@ -349,9 +345,7 @@ class PromoCartHooks implements ExtensionInterface
             $cart->purchases = $newPurchases;
         }
 
-        uksort($cart->purchases, function ($a, $b) {
-            return strlen($a) <=> strlen($b);
-        });
+        uksort($cart->purchases, fn($a, $b) => strlen($a) <=> strlen($b));
 
         $giftPromoIds = [];
         foreach ($cart->purchases as $purchase) {
@@ -364,7 +358,7 @@ class PromoCartHooks implements ExtensionInterface
         $promoScopeProductIds = [];
         foreach ($giftPromoIds as $promoId) {
             $promos = $this->productsHelper->getList(['in_campaign' => $promoId]);
-            $promoScopeProductIds[$promoId] = array_flip(array_map('intval', array_keys($promos)));
+            $promoScopeProductIds[$promoId] = array_flip(array_map(intval(...), array_keys($promos)));
         }
 
         $triggerAmountsByPromo = array_fill_keys($giftPromoIds, 0);
@@ -459,9 +453,7 @@ class PromoCartHooks implements ExtensionInterface
                     'visible' => 1,
                 ]);
                 if (!empty($rewardRows)) {
-                    usort($rewardRows, static function ($a, $b) {
-                        return (int) ($a->position ?? 0) - (int) ($b->position ?? 0);
-                    });
+                    usort($rewardRows, static fn($a, $b) => (int) ($a->position ?? 0) - (int) ($b->position ?? 0));
                 }
                 $rewardRowsByPromo[$promoId] = $rewardRows;
             }
@@ -572,9 +564,7 @@ class PromoCartHooks implements ExtensionInterface
                 continue;
             }
 
-            usort($eligibleRows, static function ($a, $b) {
-                return $a->unit_price <=> $b->unit_price;
-            });
+            usort($eligibleRows, static fn($a, $b) => $a->unit_price <=> $b->unit_price);
 
             foreach ($eligibleRows as $row) {
                 if ($freeUnits < 1) {

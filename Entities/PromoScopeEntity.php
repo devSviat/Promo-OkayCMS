@@ -56,7 +56,7 @@ class PromoScopeEntity extends Entity
 
     private function findPromoIdsByExcludeFlag(int $productId, int $brandId, array $categoryIds, int $excludeFlag): array
     {
-        $categoryIds = array_values(array_unique(array_filter(array_map('intval', $categoryIds))));
+        $categoryIds = array_values(array_unique(array_filter(array_map(intval(...), $categoryIds))));
 
         $regularIds = $this->findRegularTypePromoIds($productId, $brandId, $categoryIds, $excludeFlag);
 

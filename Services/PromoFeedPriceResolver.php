@@ -187,24 +187,22 @@ class PromoFeedPriceResolver
                 continue;
             }
 
-            if (!isset($this->scopesByCampaign[$promoId])) {
-                $this->scopesByCampaign[$promoId] = [
-                    'inclusions' => [
-                        'has_rows' => false,
-                        'products' => [],
-                        'brands' => [],
-                        'categories' => [],
-                        'feature_groups' => [],
-                    ],
-                    'exclusions' => [
-                        'has_rows' => false,
-                        'products' => [],
-                        'brands' => [],
-                        'categories' => [],
-                        'feature_groups' => [],
-                    ],
-                ];
-            }
+            $this->scopesByCampaign[$promoId] ??= [
+                'inclusions' => [
+                    'has_rows' => false,
+                    'products' => [],
+                    'brands' => [],
+                    'categories' => [],
+                    'feature_groups' => [],
+                ],
+                'exclusions' => [
+                    'has_rows' => false,
+                    'products' => [],
+                    'brands' => [],
+                    'categories' => [],
+                    'feature_groups' => [],
+                ],
+            ];
 
             $bucket = !empty($row->exclude) ? 'exclusions' : 'inclusions';
             $this->scopesByCampaign[$promoId][$bucket]['has_rows'] = true;
@@ -224,9 +222,7 @@ class PromoFeedPriceResolver
             } elseif ($type === 'feature_value') {
                 $featureId = (int) ($row->feature_id ?? 0);
                 if ($featureId > 0) {
-                    if (!isset($this->scopesByCampaign[$promoId][$bucket]['feature_groups'][$featureId])) {
-                        $this->scopesByCampaign[$promoId][$bucket]['feature_groups'][$featureId] = [];
-                    }
+                    $this->scopesByCampaign[$promoId][$bucket]['feature_groups'][$featureId] ??= [];
                     $this->scopesByCampaign[$promoId][$bucket]['feature_groups'][$featureId][$objectId] = true;
                     $featureValueIds[$objectId] = $objectId;
                 }
@@ -257,7 +253,7 @@ class PromoFeedPriceResolver
         $this->feedLinksByCampaign = $feedLinksEntity->getLinkedFeedsGrouped($promoIds);
         foreach ($this->feedLinksByCampaign as $pid => $byType) {
             foreach ($byType as $t => $ids) {
-                $this->feedLinksByCampaign[$pid][$t] = array_values(array_map('intval', (array) $ids));
+                $this->feedLinksByCampaign[$pid][$t] = array_values(array_map(intval(...), (array) $ids));
             }
         }
 
@@ -407,7 +403,7 @@ class PromoFeedPriceResolver
         $currentId = (int) $this->currentFeedId;
         foreach ($this->activeCampaigns as $cid => $campaign) {
             $feedIds = $this->feedLinksByCampaign[$cid][$this->currentFeedType] ?? [];
-            $feedIds = array_map('intval', (array) $feedIds);
+            $feedIds = array_map(intval(...), (array) $feedIds);
             if (in_array($currentId, $feedIds, true)) {
                 $result[$cid] = $campaign;
             }

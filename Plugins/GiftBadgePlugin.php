@@ -84,9 +84,7 @@ class GiftBadgePlugin extends Func
      */
     private function giftProducts(int $giftId): array
     {
-        if (!isset($this->giftProductCache[$giftId])) {
-            $this->giftProductCache[$giftId] = $this->productsHelper->getList(['id' => $giftId]);
-        }
+        $this->giftProductCache[$giftId] ??= $this->productsHelper->getList(['id' => $giftId]);
 
         return $this->giftProductCache[$giftId];
     }
