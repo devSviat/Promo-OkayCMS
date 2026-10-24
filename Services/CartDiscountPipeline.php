@@ -5,6 +5,7 @@ namespace Okay\Modules\Sviat\Promo\Services;
 use Okay\Core\Cart;
 use Okay\Core\Classes\Discount;
 use Okay\Core\EntityFactory;
+use Okay\Helpers\DiscountsHelper;
 use Okay\Core\Classes\Purchase;
 use Okay\Entities\CurrenciesEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
@@ -23,13 +24,16 @@ class CartDiscountPipeline
     /** @var PromotionEligibility */
     private $eligibility;
 
+    private DiscountsHelper $discountsHelper;
+
     /** @var int */
     private $currencyPrecision;
 
-    public function __construct(EntityFactory $entityFactory, PromotionEligibility $eligibility)
+    public function __construct(EntityFactory $entityFactory, PromotionEligibility $eligibility, DiscountsHelper $discountsHelper)
     {
         $this->entityFactory = $entityFactory;
         $this->eligibility = $eligibility;
+        $this->discountsHelper = $discountsHelper;
         $this->currencyPrecision = $this->resolveCurrencyPrecision();
     }
 
@@ -225,12 +229,52 @@ class CartDiscountPipeline
         }
     }
 
-    private function buildSviatPromoDiscount(object $promo, float $priceBefore, float $priceAfter): Discount
+    /**
+     * Знижка кампанії в тому вигляді, в якому ядро чекає її в availableDiscounts
+     * позиції: знак, ключі перекладу, тип і значення. null — кампанія до позиції
+     * не застосовна.
+     */
+    public function availablePurchaseDiscount(object $promo, float $unitPrice): ?Discount
     {
         $discount = new Discount();
         $discount->sign = 'sviat_promo';
-        $discount->name = (string) ($promo->name ?? 'Акція');
-        $discount->description = 'Promo';
+        $discount->name = 'discount_sviat_promo_name';
+        $discount->description = 'discount_sviat_promo_description';
+        $discount->langParts['promo_name'] = (string) $promo->name;
+
+        $type = strtolower(trim((string) ($promo->promo_type ?? '')));
+        if ($type === PromoCampaignEntity::TYPE_PERCENT) {
+            $pct = (float) ($promo->discount_percent ?? 0);
+            if ($pct <= 0 || $pct > 100) {
+                return null;
+            }
+            $discount->type = 'percent';
+            $discount->value = $pct;
+        } elseif ($type === PromoCampaignEntity::TYPE_FIXED) {
+            $fixed = (float) ($promo->discount_fixed ?? 0);
+            if ($fixed <= 0 || $unitPrice < $fixed) {
+                return null;
+            }
+            $discount->type = 'absolute';
+            $discount->value = $fixed;
+        } else {
+            return null;
+        }
+
+        return $discount;
+    }
+
+    /**
+     * Той самий шлях, що в ядрі (parseSet → prepareDiscounts): без нього
+     * знижка йшла в БД без type (NOT NULL) і без перекладу назви.
+     */
+    private function buildSviatPromoDiscount(object $promo, float $priceBefore, float $priceAfter): Discount
+    {
+        $available = $this->availablePurchaseDiscount($promo, $priceBefore);
+        $signs = $this->discountsHelper->parseSet((object) ['set' => '$sviat_promo', 'partial' => false])['purchase'] ?? [];
+        $prepared = $available !== null ? $this->discountsHelper->prepareDiscounts($signs, ['sviat_promo' => $available]) : [];
+        $discount = $prepared[0] ?? $available ?? new Discount();
+        $discount->sign = 'sviat_promo';
         $discount->priceBeforeDiscount = $this->roundPrice($priceBefore);
         $discount->priceAfterDiscount = $this->roundPrice($priceAfter);
         $discount->absoluteDiscount = $this->roundPrice(max(0.0, $priceBefore - $priceAfter));

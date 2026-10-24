@@ -124,36 +124,8 @@ class PromoCartHooks implements ExtensionInterface
                 continue;
             }
 
-            $type = strtolower(trim((string) ($promo->promo_type ?? '')));
-
-            $d = new Discount();
-            $d->sign = 'sviat_promo';
-            $d->name = 'discount_sviat_promo_name';
-            $d->description = 'discount_sviat_promo_description';
-            $d->langParts['promo_name'] = (string) $promo->name;
-
-            if ($type === PromoCampaignEntity::TYPE_PERCENT) {
-                $pct = (float) ($promo->discount_percent ?? 0);
-                if ($pct <= 0 || $pct > 100) {
-                    continue;
-                }
-
-                $d->type = 'percent';
-                $d->value = $pct;
-            } elseif ($type === PromoCampaignEntity::TYPE_FIXED) {
-                $fixed = (float) ($promo->discount_fixed ?? 0);
-                if ($fixed <= 0) {
-                    continue;
-                }
-
-                $price = (float) ($purchase->undiscounted_price ?? 0);
-                if ($price < $fixed) {
-                    continue;
-                }
-
-                $d->type = 'absolute';
-                $d->value = $fixed;
-            } else {
+            $d = $this->discountPipeline->availablePurchaseDiscount($promo, (float) ($purchase->undiscounted_price ?? 0));
+            if ($d === null) {
                 continue;
             }
 

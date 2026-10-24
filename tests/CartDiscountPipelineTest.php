@@ -4,6 +4,7 @@ namespace Modules\Sviat\Promo;
 
 use Okay\Core\Cart;
 use Okay\Entities\CurrenciesEntity;
+use Okay\Helpers\DiscountsHelper;
 use Okay\Modules\Sviat\Promo\Services\CartDiscountPipeline;
 use Okay\Modules\Sviat\Promo\Services\PromotionEligibility;
 
@@ -18,7 +19,7 @@ class CartDiscountPipelineTest extends PromoTestCase
         $factory = $this->mockEntityFactory([
             CurrenciesEntity::class => $this->mockCurrenciesEntity($cents),
         ]);
-        return new CartDiscountPipeline($factory, $eligibility);
+        return new CartDiscountPipeline($factory, $eligibility, $this->createStub(DiscountsHelper::class));
     }
 
     private function invokeNormalize(CartDiscountPipeline $pipeline, Cart $cart): void
@@ -94,5 +95,20 @@ class CartDiscountPipelineTest extends PromoTestCase
 
         self::assertSame(149.99, $purchase->meta->total_price);
         self::assertSame(149.99, $purchase->price);
+    }
+
+    /** Запасний шлях будував знижку без type: INSERT у ok_discounts падав на NOT NULL. */
+    public function testAvailableDiscountCarriesTypeAndValue(): void
+    {
+        $pipeline = $this->makePipeline(2);
+
+        $percent = $pipeline->availablePurchaseDiscount((object) ['name' => 'A', 'promo_type' => 'percent', 'discount_percent' => 7], 100.0);
+        self::assertSame(['percent', 7.0, 'discount_sviat_promo_name'], [$percent->type, $percent->value, $percent->name]);
+
+        $fixed = $pipeline->availablePurchaseDiscount((object) ['name' => 'B', 'promo_type' => 'fixed', 'discount_fixed' => 30], 100.0);
+        self::assertSame(['absolute', 30.0], [$fixed->type, $fixed->value]);
+
+        self::assertNull($pipeline->availablePurchaseDiscount((object) ['name' => 'C', 'promo_type' => 'fixed', 'discount_fixed' => 300], 100.0));
+        self::assertNull($pipeline->availablePurchaseDiscount((object) ['name' => 'D', 'promo_type' => 'gift'], 100.0));
     }
 }
