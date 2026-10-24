@@ -44,7 +44,7 @@
 
 ## Вимоги
 
-- PHP 8.4+
+- PHP 8.5+
 - OkayCMS 4.5.3 (чиста або [форк](https://github.com/devSviat/OkayCMS-Fork))
 - Перевірено на PHP 8.5 — на чистій OkayCMS 4.5.3 і на форку
 - (Опційно) `OkayCMS/Feeds` та/або `OkayCMS/GoogleMerchant` — якщо хочете передавати акції у фіди
