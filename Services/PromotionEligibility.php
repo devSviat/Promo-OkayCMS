@@ -58,7 +58,7 @@ class PromotionEligibility
      * Понад стільки рядків таблицю скопів цілком не читаємо. Реально їх
      * одиниці — це запобіжник, а не робочий режим.
      */
-    private const MAX_PREFETCHED_SCOPE_ROWS = 5000;
+    private const int MAX_PREFETCHED_SCOPE_ROWS = 5000;
 
     public function __construct(EntityFactory $entityFactory)
     {
@@ -472,7 +472,7 @@ class PromotionEligibility
      */
     public function getActiveCampaigns(array $promoIds, ?array $allowedTypes = null): array
     {
-        $promoIds = array_values(array_unique(array_map('intval', $promoIds)));
+        $promoIds = array_values(array_unique(array_map(intval(...), $promoIds)));
         if ($promoIds === []) {
             return [];
         }
@@ -481,9 +481,7 @@ class PromotionEligibility
         $campaigns = $this->entityFactory->get(PromoCampaignEntity::class);
         $normalizedAllowed = null;
         if ($allowedTypes !== null) {
-            $normalizedAllowed = array_map(function ($t) {
-                return $this->normalizePromoType((string) $t);
-            }, $allowedTypes);
+            $normalizedAllowed = array_map(fn($t) => $this->normalizePromoType((string) $t), $allowedTypes);
         }
 
         // Префетч уже поклав кампанії в пам'ять — інакше цей запит виконувався б

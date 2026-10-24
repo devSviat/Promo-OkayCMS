@@ -55,75 +55,75 @@ class Init extends AbstractInit
         $this->setBackendMainController('CampaignListAdmin');
 
         $this->migrateEntityTable(PromoCampaignEntity::class, [
-            (new EntityField('id'))->setIndexPrimaryKey()->setTypeInt(11, false)->setAutoIncrement(),
-            (new EntityField('name'))->setTypeVarchar(255)->setDefault('')->setIsLang(),
-            (new EntityField('url'))->setTypeVarchar(255)->setDefault('')->setIndex(100),
-            (new EntityField('meta_title'))->setTypeVarchar(512)->setDefault('')->setIsLang(),
-            (new EntityField('meta_keywords'))->setTypeVarchar(512)->setDefault('')->setIsLang(),
-            (new EntityField('meta_description'))->setTypeVarchar(512)->setDefault('')->setIsLang(),
-            (new EntityField('annotation'))->setTypeText()->setIsLang(),
-            (new EntityField('description'))->setTypeText()->setIsLang(),
-            (new EntityField('image'))->setTypeVarchar(255)->setDefault(''),
-            (new EntityField('catalog_image'))->setTypeVarchar(255)->setDefault(''),
-            (new EntityField('catalog_image_width'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CATALOG_IMAGE_WIDTH),
-            (new EntityField('catalog_image_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CATALOG_IMAGE_HEIGHT),
-            (new EntityField('image_width'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_WIDTH),
-            (new EntityField('image_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_HEIGHT),
-            (new EntityField('image_mobile'))->setTypeVarchar(255)->setDefault(''),
-            (new EntityField('image_mobile_width'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_WIDTH),
-            (new EntityField('image_mobile_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_HEIGHT),
-            (new EntityField('badge_image'))->setTypeVarchar(255)->setDefault(''),
-            (new EntityField('caption_banner_image'))->setTypeVarchar(255)->setDefault(''),
-            (new EntityField('caption_banner_width'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CAPTION_BANNER_WIDTH),
-            (new EntityField('caption_banner_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CAPTION_BANNER_HEIGHT),
-            (new EntityField('product_caption_mode'))->setTypeTinyInt(1, true)->setDefault(0),
-            (new EntityField('promo_type'))->setTypeEnum([
+            new EntityField('id')->setIndexPrimaryKey()->setTypeInt(11, false)->setAutoIncrement(),
+            new EntityField('name')->setTypeVarchar(255)->setDefault('')->setIsLang(),
+            new EntityField('url')->setTypeVarchar(255)->setDefault('')->setIndex(100),
+            new EntityField('meta_title')->setTypeVarchar(512)->setDefault('')->setIsLang(),
+            new EntityField('meta_keywords')->setTypeVarchar(512)->setDefault('')->setIsLang(),
+            new EntityField('meta_description')->setTypeVarchar(512)->setDefault('')->setIsLang(),
+            new EntityField('annotation')->setTypeText()->setIsLang(),
+            new EntityField('description')->setTypeText()->setIsLang(),
+            new EntityField('image')->setTypeVarchar(255)->setDefault(''),
+            new EntityField('catalog_image')->setTypeVarchar(255)->setDefault(''),
+            new EntityField('catalog_image_width')->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CATALOG_IMAGE_WIDTH),
+            new EntityField('catalog_image_height')->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CATALOG_IMAGE_HEIGHT),
+            new EntityField('image_width')->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_WIDTH),
+            new EntityField('image_height')->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_HEIGHT),
+            new EntityField('image_mobile')->setTypeVarchar(255)->setDefault(''),
+            new EntityField('image_mobile_width')->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_WIDTH),
+            new EntityField('image_mobile_height')->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_HEIGHT),
+            new EntityField('badge_image')->setTypeVarchar(255)->setDefault(''),
+            new EntityField('caption_banner_image')->setTypeVarchar(255)->setDefault(''),
+            new EntityField('caption_banner_width')->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CAPTION_BANNER_WIDTH),
+            new EntityField('caption_banner_height')->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CAPTION_BANNER_HEIGHT),
+            new EntityField('product_caption_mode')->setTypeTinyInt(1, true)->setDefault(0),
+            new EntityField('promo_type')->setTypeEnum([
                 PromoCampaignEntity::TYPE_PERCENT,
                 PromoCampaignEntity::TYPE_FIXED,
                 PromoCampaignEntity::TYPE_GIFT,
                 PromoCampaignEntity::TYPE_BUNDLE_3X2,
                 PromoCampaignEntity::TYPE_FREE_SHIPPING,
             ], false)->setDefault(PromoCampaignEntity::TYPE_PERCENT)->setIndex(),
-            (new EntityField('min_order_amount'))->setTypeDecimal(14, 4)->setDefault(0),
-            (new EntityField('discount_percent'))->setTypeDecimal(10, 2)->setNullable(),
-            (new EntityField('discount_fixed'))->setTypeDecimal(14, 4)->setNullable(),
-            (new EntityField('has_date_range'))->setTypeTinyInt(1, true)->setDefault(0)->setIndex(),
-            (new EntityField('date_start'))->setTypeDatetime()->setNullable()->setIndex(),
-            (new EntityField('date_end'))->setTypeDatetime()->setNullable()->setIndex(),
-            (new EntityField('feed_enabled'))->setTypeTinyInt(1, true)->setDefault(0)->setIndex(),
-            (new EntityField('exclude_no_image'))->setTypeTinyInt(1, true)->setDefault(0),
-            (new EntityField('visible'))->setTypeTinyInt(1, true)->setDefault(0)->setIndex(),
-            (new EntityField('priority'))->setTypeInt(11, true)->setDefault(0)->setIndex(),
-            (new EntityField('position'))->setTypeInt(11, true)->setDefault(0)->setIndex(),
-            (new EntityField('last_modify'))->setTypeTimestamp(),
+            new EntityField('min_order_amount')->setTypeDecimal(14, 4)->setDefault(0),
+            new EntityField('discount_percent')->setTypeDecimal(10, 2)->setNullable(),
+            new EntityField('discount_fixed')->setTypeDecimal(14, 4)->setNullable(),
+            new EntityField('has_date_range')->setTypeTinyInt(1, true)->setDefault(0)->setIndex(),
+            new EntityField('date_start')->setTypeDatetime()->setNullable()->setIndex(),
+            new EntityField('date_end')->setTypeDatetime()->setNullable()->setIndex(),
+            new EntityField('feed_enabled')->setTypeTinyInt(1, true)->setDefault(0)->setIndex(),
+            new EntityField('exclude_no_image')->setTypeTinyInt(1, true)->setDefault(0),
+            new EntityField('visible')->setTypeTinyInt(1, true)->setDefault(0)->setIndex(),
+            new EntityField('priority')->setTypeInt(11, true)->setDefault(0)->setIndex(),
+            new EntityField('position')->setTypeInt(11, true)->setDefault(0)->setIndex(),
+            new EntityField('last_modify')->setTypeTimestamp(),
         ]);
 
         $this->migrateEntityTable(PromoRewardLineEntity::class, [
-            (new EntityField('promo_id'))->setTypeInt(11)->setIndex(),
-            (new EntityField('gift_id'))->setTypeInt(11)->setIndex(),
-            (new EntityField('position'))->setTypeInt(11),
+            new EntityField('promo_id')->setTypeInt(11)->setIndex(),
+            new EntityField('gift_id')->setTypeInt(11)->setIndex(),
+            new EntityField('position')->setTypeInt(11),
         ]);
 
         $this->migrateEntityTable(PromoScopeEntity::class, [
-            (new EntityField('promo_id'))->setTypeInt(11)->setIndex(),
-            (new EntityField('object_id'))->setTypeInt(11)->setIndex(),
-            (new EntityField('type'))->setTypeEnum(['product', 'category', 'brand', 'feature_value'])->setDefault('category')->setIndex(),
-            (new EntityField('feature_id'))->setTypeInt(11)->setNullable()->setIndex(),
-            (new EntityField('exclude'))->setTypeTinyInt(1, true)->setDefault(0)->setIndex(),
+            new EntityField('promo_id')->setTypeInt(11)->setIndex(),
+            new EntityField('object_id')->setTypeInt(11)->setIndex(),
+            new EntityField('type')->setTypeEnum(['product', 'category', 'brand', 'feature_value'])->setDefault('category')->setIndex(),
+            new EntityField('feature_id')->setTypeInt(11)->setNullable()->setIndex(),
+            new EntityField('exclude')->setTypeTinyInt(1, true)->setDefault(0)->setIndex(),
         ]);
 
         $this->migrateEntityTable(PromoFeedLinkEntity::class, [
-            (new EntityField('promo_id'))->setTypeInt(11)->setIndex(),
-            (new EntityField('feed_type'))->setTypeEnum([
+            new EntityField('promo_id')->setTypeInt(11)->setIndex(),
+            new EntityField('feed_type')->setTypeEnum([
                 PromoFeedLinkEntity::TYPE_FEEDS,
                 PromoFeedLinkEntity::TYPE_GM,
             ])->setDefault(PromoFeedLinkEntity::TYPE_FEEDS)->setIndex(),
-            (new EntityField('feed_id'))->setTypeInt(11)->setIndex(),
+            new EntityField('feed_id')->setTypeInt(11)->setIndex(),
         ]);
 
         $this->migrateEntityField(
             PurchasesEntity::class,
-            (new EntityField('gift_product_id'))->setTypeInt(11)->setNullable()
+            new EntityField('gift_product_id')->setTypeInt(11)->setNullable()
         );
     }
 
@@ -294,7 +294,7 @@ class Init extends AbstractInit
         // Кампанія вмикається й вимикається за датою, без жодного запису в
         // базу, тож інвалідатор сутності цього переходу не бачить.
         $this->registerSchedule(
-            (new Schedule([PromoBoundaryWatcher::class, 'invalidateWhenActiveSetChanges']))
+            new Schedule([PromoBoundaryWatcher::class, 'invalidateWhenActiveSetChanges'])
                 ->name('Promo: invalidate cache on campaign window boundaries')
                 ->time('* * * * *')
                 ->overlap(false)
@@ -364,27 +364,27 @@ class Init extends AbstractInit
     {
         $this->migrateEntityField(
             PromoCampaignEntity::class,
-            (new EntityField('image_width'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_WIDTH)
+            new EntityField('image_width')->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_WIDTH)
         );
         $this->migrateEntityField(
             PromoCampaignEntity::class,
-            (new EntityField('image_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_HEIGHT)
+            new EntityField('image_height')->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_HEIGHT)
         );
         $this->migrateEntityField(
             PromoCampaignEntity::class,
-            (new EntityField('image_mobile_width'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_WIDTH)
+            new EntityField('image_mobile_width')->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_WIDTH)
         );
         $this->migrateEntityField(
             PromoCampaignEntity::class,
-            (new EntityField('image_mobile_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_HEIGHT)
+            new EntityField('image_mobile_height')->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_IMAGE_MOBILE_HEIGHT)
         );
         $this->migrateEntityField(
             PromoCampaignEntity::class,
-            (new EntityField('caption_banner_width'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CAPTION_BANNER_WIDTH)
+            new EntityField('caption_banner_width')->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CAPTION_BANNER_WIDTH)
         );
         $this->migrateEntityField(
             PromoCampaignEntity::class,
-            (new EntityField('caption_banner_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CAPTION_BANNER_HEIGHT)
+            new EntityField('caption_banner_height')->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CAPTION_BANNER_HEIGHT)
         );
     }
 
@@ -392,15 +392,15 @@ class Init extends AbstractInit
     {
         $this->migrateEntityField(
             PromoCampaignEntity::class,
-            (new EntityField('catalog_image'))->setTypeVarchar(255)->setDefault('')
+            new EntityField('catalog_image')->setTypeVarchar(255)->setDefault('')
         );
         $this->migrateEntityField(
             PromoCampaignEntity::class,
-            (new EntityField('catalog_image_width'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CATALOG_IMAGE_WIDTH)
+            new EntityField('catalog_image_width')->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CATALOG_IMAGE_WIDTH)
         );
         $this->migrateEntityField(
             PromoCampaignEntity::class,
-            (new EntityField('catalog_image_height'))->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CATALOG_IMAGE_HEIGHT)
+            new EntityField('catalog_image_height')->setTypeInt(11, true)->setDefault(PromoCampaignEntity::DEFAULT_CATALOG_IMAGE_HEIGHT)
         );
     }
 
@@ -408,7 +408,7 @@ class Init extends AbstractInit
     {
         $this->migrateEntityField(
             PromoCampaignEntity::class,
-            (new EntityField('exclude_no_image'))->setTypeTinyInt(1, true)->setDefault(0)
+            new EntityField('exclude_no_image')->setTypeTinyInt(1, true)->setDefault(0)
         );
     }
 }

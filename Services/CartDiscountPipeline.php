@@ -346,9 +346,7 @@ class CartDiscountPipeline
         }
 
         // Безкоштовними робимо найдешевші одиниці у скопі акції.
-        usort($unitRows, function ($a, $b) {
-            return $a->unit_price <=> $b->unit_price;
-        });
+        usort($unitRows, fn($a, $b) => $a->unit_price <=> $b->unit_price);
 
         foreach ($unitRows as $row) {
             if ($freeUnits < 1) {
