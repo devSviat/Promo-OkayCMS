@@ -16,6 +16,7 @@ use Okay\Helpers\XmlFeedHelper;
 use Okay\Modules\Sviat\Promo\Requests\CampaignPayloadRequest;
 use Okay\Modules\Sviat\Promo\Helpers\CampaignRepository;
 use Okay\Modules\Sviat\Promo\Services\PromotionEligibility;
+use Okay\Helpers\DiscountsHelper;
 use Okay\Modules\Sviat\Promo\Services\CartDiscountPipeline;
 use Okay\Modules\Sviat\Promo\Services\PromoFeedPriceResolver;
 use Okay\Modules\Sviat\Promo\Services\PromoProductDisplayService;
@@ -57,6 +58,7 @@ return [
         'arguments' => [
             new SR(EntityFactory::class),
             new SR(PromotionEligibility::class),
+            new SR(DiscountsHelper::class),
         ],
     ],
     PromoProductDisplayService::class => [
