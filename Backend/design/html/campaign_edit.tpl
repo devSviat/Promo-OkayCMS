@@ -336,7 +336,7 @@
                                             </div>
                                             {/foreach}
                                         </div>
-                                        <button type="button" class="btn btn-sm btn-default mt-h fn_add_feature_row"
+                                        <button type="button" class="btn btn_small btn-info mt-h fn_add_feature_row"
                                                 data-mode="include" data-target="sv_feature_rows_include">
                                             + {$btr->sviat_promo__add_feature_row|escape}
                                         </button>
@@ -410,7 +410,7 @@
                                             </div>
                                             {/foreach}
                                         </div>
-                                        <button type="button" class="btn btn-sm btn-default mt-h fn_add_feature_row"
+                                        <button type="button" class="btn btn_small btn-info mt-h fn_add_feature_row"
                                                 data-mode="exclude" data-target="sv_feature_rows_exclude">
                                             + {$btr->sviat_promo__add_feature_row|escape}
                                         </button>
