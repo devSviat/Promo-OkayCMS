@@ -3,6 +3,7 @@
 namespace Okay\Modules\Sviat\Promo\Plugins;
 
 use Okay\Core\Design;
+use Okay\Modules\Sviat\Promo\Helpers\ScopedDesignVars;
 use Okay\Core\EntityFactory;
 use Okay\Core\SmartyPlugins\Func;
 use Okay\Helpers\ProductsHelper;
@@ -15,6 +16,8 @@ use Okay\Modules\Sviat\Promo\Services\PromotionEligibility;
  */
 class GiftBadgePlugin extends Func
 {
+    use ScopedDesignVars;
+
     protected $tag = 'sviat_promo_icon';
 
     protected $design;
@@ -58,10 +61,10 @@ class GiftBadgePlugin extends Func
             return false;
         }
 
-        $this->design->assign('gift', $this->giftProducts((int) $promoGift->gift_id));
-        $this->design->assign('promo', $campaign);
-
-        return $this->design->fetch('promo_icon.tpl');
+        return $this->fetchWithVars($this->design, 'promo_icon.tpl', [
+            'gift' => $this->giftProducts((int) $promoGift->gift_id),
+            'promo' => $campaign,
+        ]);
     }
 
     /**

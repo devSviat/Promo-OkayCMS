@@ -3,6 +3,7 @@
 namespace Okay\Modules\Sviat\Promo\Plugins;
 
 use Okay\Core\Design;
+use Okay\Modules\Sviat\Promo\Helpers\ScopedDesignVars;
 use Okay\Core\SmartyPlugins\Func;
 
 /**
@@ -10,6 +11,8 @@ use Okay\Core\SmartyPlugins\Func;
  */
 class PromoBadgeStickerPlugin extends Func
 {
+    use ScopedDesignVars;
+
     protected $tag = 'sviat_promo_badge_sticker';
 
     /** @var Design */
@@ -26,8 +29,6 @@ class PromoBadgeStickerPlugin extends Func
             return '';
         }
 
-        $this->design->assign('product', $vars['product']);
-
-        return $this->design->fetch('promo_badge_sticker.tpl');
+        return $this->fetchWithVars($this->design, 'promo_badge_sticker.tpl', ['product' => $vars['product']]);
     }
 }
