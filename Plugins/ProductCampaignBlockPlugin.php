@@ -3,6 +3,7 @@
 namespace Okay\Modules\Sviat\Promo\Plugins;
 
 use Okay\Core\Design;
+use Okay\Modules\Sviat\Promo\Helpers\ScopedDesignVars;
 use Okay\Core\EntityFactory;
 use Okay\Core\SmartyPlugins\Func;
 use Okay\Entities\CurrenciesEntity;
@@ -16,6 +17,8 @@ use Okay\Modules\Sviat\Promo\Services\PromotionEligibility;
  */
 class ProductCampaignBlockPlugin extends Func
 {
+    use ScopedDesignVars;
+
     protected $tag = 'sviat_promo_product';
 
     protected $design;
@@ -108,10 +111,10 @@ class ProductCampaignBlockPlugin extends Func
             $this->computeEffectivePrice($campaign, $product);
         }
 
-        $this->design->assign('product', $product);
-        $this->design->assign('promo', $campaign);
-
-        return $this->design->fetch('promo_product.tpl');
+        return $this->fetchWithVars($this->design, 'promo_product.tpl', [
+            'product' => $product,
+            'promo' => $campaign,
+        ]);
     }
 
     /**
