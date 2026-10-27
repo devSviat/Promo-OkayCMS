@@ -16,7 +16,11 @@ class GiftSelectionEndpoint extends AbstractController
         // Вибір подарунка осідає в сесії й потрапляє у замовлення, тобто це
         // мутація кошика — така сама, як у CartController, і охорона потрібна
         // та сама. Відповідь читають як json, тож і відмова має бути json.
-        $this->requireCustomerCsrf(true);
+        // requireCustomerCsrf() є лише у форку; стоковий CartController CSRF не перевіряє.
+        // @phpstan-ignore function.alreadyNarrowedType (на форку метод є завжди; на стоці — ні)
+        if (method_exists($this, 'requireCustomerCsrf')) {
+            $this->requireCustomerCsrf(true);
+        }
 
         $gift = $request->post('gift_product', 'integer');
         $gift_variant = $request->post('gift_variant', 'integer');
