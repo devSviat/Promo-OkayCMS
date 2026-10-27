@@ -69,7 +69,7 @@ class CampaignEditAdmin extends IndexAdmin
                 $this->design->assign('message_error', 'empty_url');
             } elseif (($a = $campaignRepository->findPromos(['url' => $promo->url, 'admin_list' => 1])) && $a[0]->id != $promo->id) {
                 $this->design->assign('message_error', 'url_exists');
-            } elseif (str_ends_with($promo->url, '-') || str_starts_with($promo->url, '-')) {
+            } elseif (substr_compare($promo->url, '-', -strlen('-')) === 0 || strncmp($promo->url, '-', strlen('-')) === 0) {
                 $this->design->assign('message_error', 'url_wrong');
             } elseif ($promo->promo_type === PromoCampaignEntity::TYPE_GIFT && !$promoGifts) {
                 $this->design->assign('message_error', 'empty_promo_gifts');
@@ -249,7 +249,7 @@ class CampaignEditAdmin extends IndexAdmin
                     continue;
                 }
                 foreach (['category', 'brand'] as $type) {
-                    $objects_array[$mode][$type] = array_map(intval(...), (array) ($promoObjects[$mode][$type] ?? []));
+                    $objects_array[$mode][$type] = array_map(\Closure::fromCallable('intval'), (array) ($promoObjects[$mode][$type] ?? []));
                 }
                 foreach ((array) ($promoObjects[$mode]['product'] ?? []) as $productId) {
                     $productId = (int) $productId;

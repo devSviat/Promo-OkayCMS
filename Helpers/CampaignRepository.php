@@ -111,8 +111,10 @@ class CampaignRepository
     // -------------------------------------------------------------------------
     // Зображення
     // -------------------------------------------------------------------------
-
-    private const array PROMO_IMAGE_FIELDS = ['image', 'catalog_image', 'image_mobile', 'badge_image', 'caption_banner_image'];
+    /**
+     * @var mixed[]
+     */
+    private const PROMO_IMAGE_FIELDS = ['image', 'catalog_image', 'image_mobile', 'badge_image', 'caption_banner_image'];
 
     public function deleteImage($promo)
     {

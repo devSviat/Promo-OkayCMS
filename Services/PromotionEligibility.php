@@ -57,8 +57,9 @@ class PromotionEligibility
     /**
      * Понад стільки рядків таблицю скопів цілком не читаємо. Реально їх
      * одиниці — це запобіжник, а не робочий режим.
+     * @var int
      */
-    private const int MAX_PREFETCHED_SCOPE_ROWS = 5000;
+    private const MAX_PREFETCHED_SCOPE_ROWS = 5000;
 
     public function __construct(EntityFactory $entityFactory)
     {
@@ -472,7 +473,7 @@ class PromotionEligibility
      */
     public function getActiveCampaigns(array $promoIds, ?array $allowedTypes = null): array
     {
-        $promoIds = array_values(array_unique(array_map(intval(...), $promoIds)));
+        $promoIds = array_values(array_unique(array_map(\Closure::fromCallable('intval'), $promoIds)));
         if ($promoIds === []) {
             return [];
         }

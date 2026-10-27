@@ -98,10 +98,12 @@ class PromoBoundaryWatcherTest extends TestCase
 
 class FakeInvalidation implements ProductCacheInvalidation
 {
+    private bool $available = true;
     public int $calls = 0;
 
-    public function __construct(private bool $available = true)
+    public function __construct(bool $available = true)
     {
+        $this->available = $available;
     }
 
     public function isAvailable(): bool

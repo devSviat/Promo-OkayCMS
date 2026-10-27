@@ -16,7 +16,10 @@ use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
  */
 class PromoBoundaryWatcher
 {
-    private const string STATE_PARAM = 'sviat__promo__active_set';
+    /**
+     * @var string
+     */
+    private const STATE_PARAM = 'sviat__promo__active_set';
 
     private EntityFactory $entityFactory;
     private PromotionEligibility $eligibility;

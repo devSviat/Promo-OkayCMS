@@ -207,7 +207,7 @@ class PromoCartHooks implements ExtensionInterface
             $sets = [];
         }
         foreach ($sets as $row) {
-            if (is_object($row) && isset($row->set) && str_contains((string) $row->set, 'sviat_promo')) {
+            if (is_object($row) && isset($row->set) && strpos((string) $row->set, 'sviat_promo') !== false) {
                 return $sets;
             }
         }
@@ -330,7 +330,7 @@ class PromoCartHooks implements ExtensionInterface
         $promoScopeProductIds = [];
         foreach ($giftPromoIds as $promoId) {
             $promos = $this->productsHelper->getList(['in_campaign' => $promoId]);
-            $promoScopeProductIds[$promoId] = array_flip(array_map(intval(...), array_keys($promos)));
+            $promoScopeProductIds[$promoId] = array_flip(array_map(\Closure::fromCallable('intval'), array_keys($promos)));
         }
 
         $triggerAmountsByPromo = array_fill_keys($giftPromoIds, 0);

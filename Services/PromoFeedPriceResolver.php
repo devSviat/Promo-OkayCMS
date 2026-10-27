@@ -253,7 +253,7 @@ class PromoFeedPriceResolver
         $this->feedLinksByCampaign = $feedLinksEntity->getLinkedFeedsGrouped($promoIds);
         foreach ($this->feedLinksByCampaign as $pid => $byType) {
             foreach ($byType as $t => $ids) {
-                $this->feedLinksByCampaign[$pid][$t] = array_values(array_map(intval(...), (array) $ids));
+                $this->feedLinksByCampaign[$pid][$t] = array_values(array_map(\Closure::fromCallable('intval'), (array) $ids));
             }
         }
 
@@ -403,7 +403,7 @@ class PromoFeedPriceResolver
         $currentId = (int) $this->currentFeedId;
         foreach ($this->activeCampaigns as $cid => $campaign) {
             $feedIds = $this->feedLinksByCampaign[$cid][$this->currentFeedType] ?? [];
-            $feedIds = array_map(intval(...), (array) $feedIds);
+            $feedIds = array_map(\Closure::fromCallable('intval'), (array) $feedIds);
             if (in_array($currentId, $feedIds, true)) {
                 $result[$cid] = $campaign;
             }

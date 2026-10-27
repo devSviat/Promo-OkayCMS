@@ -150,7 +150,7 @@ class CampaignPayloadRequest
         $result = [];
         foreach (['feeds', 'gm'] as $type) {
             if (!empty($raw[$type]) && is_array($raw[$type])) {
-                $result[$type] = array_values(array_map(intval(...), $raw[$type]));
+                $result[$type] = array_values(array_map(\Closure::fromCallable('intval'), $raw[$type]));
             }
         }
         return $result;

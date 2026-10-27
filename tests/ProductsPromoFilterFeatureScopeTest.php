@@ -50,11 +50,9 @@ class ProductsPromoFilterFeatureScopeTest extends TestCase
     /**
      * @dataProvider scopeSqlBuilders
      */
-    #[\PHPUnit\Framework\Attributes\DataProvider('scopeSqlBuilders')]
     public function testFeatureScopeIsCountedWithoutJoiningFeatureValues(string $method, $argument): void
     {
         $sql = implode("\n", $this->capturedSql($method, $argument));
-
         self::assertNotSame('', $sql, 'фільтр має додати умову');
         self::assertStringNotContainsString(
             'INNER JOIN __features_values',
@@ -66,14 +64,11 @@ class ProductsPromoFilterFeatureScopeTest extends TestCase
     /**
      * @dataProvider scopeSqlBuilders
      */
-    #[\PHPUnit\Framework\Attributes\DataProvider('scopeSqlBuilders')]
     public function testFeatureGroupsAreCountedByTheStoredFeatureId(string $method, $argument): void
     {
         $sql = implode("\n", $this->capturedSql($method, $argument));
-
         preg_match_all('/COUNT\(DISTINCT\s+([a-z_]+)\.feature_id\)/i', $sql, $matches);
         self::assertNotEmpty($matches[1], 'скоп по характеристиках має рахуватись');
-
         foreach ($matches[1] as $alias) {
             self::assertStringStartsWith(
                 'spo',

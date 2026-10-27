@@ -34,7 +34,7 @@ class GiftSelectionEndpointStockTest extends TestCase
             }
         };
 
-        $endpoint = new \ReflectionClass(GiftSelectionEndpoint::class)->newInstanceWithoutConstructor();
+        $endpoint = (new \ReflectionClass(GiftSelectionEndpoint::class))->newInstanceWithoutConstructor();
         $result = $endpoint->ajaxAddGiftToCart(
             $request,
             $this->createStub(EntityFactory::class),

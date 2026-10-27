@@ -45,7 +45,7 @@ class PluginScopedVarsTest extends TestCase
         $cardProduct = (object) ['id' => 2, 'sviat_promo_badge_image' => 'badge.png'];
         $this->vars['product'] = $pageProduct;
 
-        $html = new PromoBadgeStickerPlugin($this->design())->run(['product' => $cardProduct]);
+        $html = (new PromoBadgeStickerPlugin($this->design()))->run(['product' => $cardProduct]);
 
         $this->assertSame('html', $html);
         $this->assertSame($cardProduct, $this->varsSeenByFetch['product']);
