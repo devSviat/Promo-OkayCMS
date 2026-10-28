@@ -14,6 +14,7 @@ use Okay\Entities\FeaturesValuesEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoRewardLineEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoScopeEntity;
+use Okay\Modules\Sviat\Promo\Entities\PromoQuantityTierEntity;
 use Okay\Modules\Sviat\Promo\Helpers\CampaignRepository;
 use Okay\Modules\Sviat\Promo\Requests\CampaignPayloadRequest;
 use Okay\Modules\Sviat\Promo\Services\ProductsWithoutImageFilter;
@@ -38,6 +39,8 @@ class CampaignEditAdmin extends IndexAdmin
         $campaigns      = $entityFactory->get(PromoCampaignEntity::class);
         $rewardLines    = $entityFactory->get(PromoRewardLineEntity::class);
         $scopeRows      = $entityFactory->get(PromoScopeEntity::class);
+        $quantityTierRows  = $entityFactory->get(PromoQuantityTierEntity::class);
+        $quantityTiers = [];
         $productsEntity = $entityFactory->get(ProductsEntity::class);
         $categoriesEntity = $entityFactory->get(CategoriesEntity::class);
         $brandsEntity   = $entityFactory->get(BrandsEntity::class);
@@ -48,6 +51,7 @@ class CampaignEditAdmin extends IndexAdmin
 
         if ($this->request->method('post')) {
             $promo       = $payload->postPromo();
+            $quantityTiers = $payload->postQuantityTiers();
             $promoGifts  = $payload->postPromoGift($promo);
             $rawObjects  = $payload->postPromoObject();
             $promoObjects = $this->normalizePromoObjects($rawObjects);
@@ -75,6 +79,8 @@ class CampaignEditAdmin extends IndexAdmin
                 $this->design->assign('message_error', 'empty_promo_gifts');
             } elseif (!$this->hasAnyObject($promoObjects)) {
                 $this->design->assign('message_error', 'empty_promo_objects');
+            } elseif ($promo->promo_type === PromoCampaignEntity::TYPE_QUANTITY && !$quantityTiers) {
+                $this->design->assign('message_error', 'quantity_invalid_tiers');
             } elseif ($promo->promo_type === PromoCampaignEntity::TYPE_PERCENT && ($promo->discount_percent === null || $promo->discount_percent <= 0)) {
                 $this->design->assign('message_error', 'empty_discount_percent');
             } elseif ($promo->promo_type === PromoCampaignEntity::TYPE_FIXED && ($promo->discount_fixed === null || $promo->discount_fixed <= 0)) {
@@ -173,6 +179,18 @@ class CampaignEditAdmin extends IndexAdmin
                     }
                 }
 
+                // Пороги має лише акція «за кількістю»; пороги інших типів не чіпаємо.
+                if ($promo->promo_type === PromoCampaignEntity::TYPE_QUANTITY) {
+                    $quantityTierRows->deleteByPromoId((int) $promo->id);
+                    foreach ($quantityTiers as $tier) {
+                        $quantityTierRows->add([
+                            'promo_id' => (int) $promo->id,
+                            'min_quantity' => $tier['min_quantity'],
+                            'percent' => $tier['percent'],
+                        ]);
+                    }
+                }
+
                 // Зберігаємо прив'язки до фідів
                 $campaignRepository->saveFeedLinks(
                     (int) $promo->id,
@@ -190,6 +208,9 @@ class CampaignEditAdmin extends IndexAdmin
                 if (!empty($promo->id)) {
                     $promoGifts  = $rewardLines->find(['promo_id' => $promo->id]);
                     $promoObjects = $scopeRows->find(['promo_id' => $promo->id]);
+                    if ($promo->promo_type === PromoCampaignEntity::TYPE_QUANTITY) {
+                        $quantityTiers = $quantityTierRows->find(['promo_id' => $promo->id]);
+                    }
                 }
             } else {
                 $promo = (object) [
@@ -201,10 +222,10 @@ class CampaignEditAdmin extends IndexAdmin
                     'exclude_no_image'     => 0,
                     'has_date_range'       => 0,
                     'promo_type'           => PromoCampaignEntity::TYPE_PERCENT,
-                    'priority'             => 0,
                     'min_order_amount'     => 0,
                     'discount_percent'     => null,
                     'discount_fixed'       => null,
+                    'round_final_price'    => 0,
                     'catalog_image'        => '',
                     'image_mobile'         => '',
                     'image_width'          => PromoCampaignEntity::DEFAULT_IMAGE_WIDTH,
@@ -300,9 +321,21 @@ class CampaignEditAdmin extends IndexAdmin
             ? $campaignRepository->getLinkedFeedIds((int) $promo->id)
             : [];
 
+        // find() дає об'єкти, а postQuantityTiers() і типові пороги — масиви; шаблон читає `$tier.min_quantity`.
+        $quantityTiersForTemplate = array_map(
+            static function ($tier): array {
+                $tier = (array) $tier;
+                return [
+                    'min_quantity' => (int) ($tier['min_quantity'] ?? 0),
+                    'percent' => (float) ($tier['percent'] ?? 0) ?: '',
+                ];
+            },
+            $quantityTiers
+        );
+        $this->design->assign('promo_quantity_tiers', $quantityTiersForTemplate ?: [['min_quantity' => 2, 'percent' => '']]);
         $this->design->assign('promo_objects', $objects_array);
         $this->design->assign('categories', $categoriesEntity->getCategoriesTree());
-        $this->design->assign('brands', $brandsEntity->find());
+        $this->design->assign('brands', $brandsEntity->noLimit()->find());
         $this->design->assign('promo', $promo);
         $this->design->assign('date_start_local', !empty($promo->date_start) ? date('Y-m-d\TH:i', strtotime((string) $promo->date_start)) : date('Y-m-d\T00:00'));
         $this->design->assign('date_end_local',   !empty($promo->date_end)   ? date('Y-m-d\TH:i', strtotime((string) $promo->date_end))   : date('Y-m-d\T23:59'));
@@ -349,6 +382,7 @@ class CampaignEditAdmin extends IndexAdmin
         $this->design->assign('sv_promo_feat_json', json_encode($featuresJsonList));
         $this->design->assign('promo_types', [
             PromoCampaignEntity::TYPE_PERCENT      => $backendTranslations->getTranslation('sviat_promo__type_percent'),
+            PromoCampaignEntity::TYPE_QUANTITY => $backendTranslations->getTranslation('sviat_promo__type_quantity'),
             PromoCampaignEntity::TYPE_FIXED        => $backendTranslations->getTranslation('sviat_promo__type_fixed'),
             PromoCampaignEntity::TYPE_GIFT         => $backendTranslations->getTranslation('sviat_promo__type_gift'),
             PromoCampaignEntity::TYPE_BUNDLE_3X2   => $backendTranslations->getTranslation('sviat_promo__type_bundle'),

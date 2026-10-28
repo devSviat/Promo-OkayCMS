@@ -501,3 +501,10 @@ a.sviat-promo-caption-banner {
         max-width: 100%;
     }
 }
+/* Підпис біля знижки акції в підсумку: вона вже врахована в ціні позиції, а не віднімається окремо. */
+.sviat_promo_discount_included {display:block;font-size:11px;line-height:1.35;opacity:.72;margin-top:2px;font-weight:400;}
+
+.sviat_promo_original_price {font-size:12px;line-height:1.4;color:#767b85;margin:4px 0 5px;}
+.sviat_promo_original_price del {text-decoration:line-through;text-decoration-thickness:1px;white-space:nowrap;}
+.sviat_promo_original_price .sviat_promo_original_line {display:block;font-size:11px;line-height:1.5;}
+.sviat_promo_original_price .sviat_promo_unit_label {white-space:nowrap;}

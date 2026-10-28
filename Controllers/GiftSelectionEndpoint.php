@@ -5,6 +5,8 @@ namespace Okay\Modules\Sviat\Promo\Controllers;
 use Okay\Controllers\AbstractController;
 use Okay\Core\EntityFactory;
 use Okay\Core\Request;
+use Okay\Entities\ProductsEntity;
+use Okay\Entities\VariantsEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoRewardLineEntity;
 use Okay\Modules\Sviat\Promo\Services\PromotionEligibility;
@@ -39,7 +41,7 @@ class GiftSelectionEndpoint extends AbstractController
             return;
         }
 
-        if (!$eligibility->campaignDatesOk($campaign)) {
+        if (!$eligibility->campaignVisibleOnStorefront($campaign) || !$eligibility->campaignDatesOk($campaign)) {
             return;
         }
 
@@ -54,6 +56,28 @@ class GiftSelectionEndpoint extends AbstractController
             return;
         }
 
+        // Не довіряємо product/variant/gift_variant з POST: перевірка прив'язок
+        // запобігає підміні подарунка чи застосуванню його до стороннього товару.
+        /** @var ProductsEntity $products */
+        $products = $entityFactory->get(ProductsEntity::class);
+        /** @var VariantsEntity $variants */
+        $variants = $entityFactory->get(VariantsEntity::class);
+        $triggerProduct = $products->get($product);
+        $triggerVariant = $variants->get($variant);
+        $rewardVariant = $variants->get($gift_variant);
+        if (empty($triggerProduct->id) || empty($triggerVariant->id) || empty($rewardVariant->id)
+            || (int) ($triggerVariant->product_id ?? 0) !== $product
+            || (int) ($rewardVariant->product_id ?? 0) !== $gift
+            || !$eligibility->productMatchesCampaignByProductData(
+                $promo_id, $product, (int) ($triggerProduct->brand_id ?? 0),
+                (int) ($triggerProduct->main_category_id ?? 0)
+            )) {
+            return;
+        }
+
+        if (!isset($_SESSION['shopping_sviat_promo_gift']) || !is_array($_SESSION['shopping_sviat_promo_gift'])) {
+            $_SESSION['shopping_sviat_promo_gift'] = [];
+        }
         $_SESSION['shopping_sviat_promo_gift'][$variant] = [
             'gift_id' => $gift,
             'gift_variant_id' => $gift_variant,

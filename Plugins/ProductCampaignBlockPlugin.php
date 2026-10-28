@@ -2,6 +2,8 @@
 
 namespace Okay\Modules\Sviat\Promo\Plugins;
 
+use Okay\Modules\Sviat\Promo\Services\PromoPriceRounding;
+
 use Okay\Core\Design;
 use Okay\Modules\Sviat\Promo\Helpers\ScopedDesignVars;
 use Okay\Core\EntityFactory;
@@ -125,6 +127,10 @@ class ProductCampaignBlockPlugin extends Func
      */
     private function computeEffectivePrice(object $campaign, $product): void
     {
+        // Мінімум замовлення не визначити на сторінці товару. Не показуємо умовну ціну як гарантовану.
+        if ((float) ($campaign->min_order_amount ?? 0) > 0) {
+            return;
+        }
         if (empty($product->variant)) {
             return;
         }
@@ -136,7 +142,7 @@ class ProductCampaignBlockPlugin extends Func
         if ($campaign->promo_type === PromoCampaignEntity::TYPE_PERCENT) {
             $pct = (float) ($campaign->discount_percent ?? 0);
             if ($pct > 0 && $pct <= 100) {
-                $effective = round($base * (100 - $pct) / 100, $this->currencyPrecision);
+                $effective = PromoPriceRounding::price($campaign, $base * (100 - $pct) / 100, $this->currencyPrecision, $base);
                 $campaign->sviat_promo_effective_price = $effective;
                 $product->sviat_promo_discounted_unit_price = $effective;
                 $product->sviat_promo_discount_percent = $pct;
@@ -144,7 +150,7 @@ class ProductCampaignBlockPlugin extends Func
         } elseif ($campaign->promo_type === PromoCampaignEntity::TYPE_FIXED) {
             $fixed = (float) ($campaign->discount_fixed ?? 0);
             if ($fixed > 0 && $base >= $fixed) {
-                $effective = round($base - $fixed, $this->currencyPrecision);
+                $effective = PromoPriceRounding::price($campaign, $base - $fixed, $this->currencyPrecision, $base);
                 $campaign->sviat_promo_effective_price = $effective;
                 $product->sviat_promo_discounted_unit_price = $effective;
                 $product->sviat_promo_discount_percent = round(($fixed / $base) * 100, 2);

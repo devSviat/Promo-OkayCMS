@@ -73,6 +73,8 @@
                         {$btr->sviat_promo__empty_discount_percent|escape}
                     {elseif $message_error == 'empty_discount_fixed'}
                         {$btr->sviat_promo__empty_discount_fixed|escape}
+                    {elseif $message_error == 'quantity_invalid_tiers'}
+                        {$btr->sviat_promo__quantity_invalid_tiers|escape}
                     {elseif $message_error == 'empty_promo_objects'}
                         {$btr->sviat_promo__empty_promo_objects|escape}
                     {else}
@@ -182,6 +184,58 @@
                         </div>
                     </div>
 
+                    </div>
+
+                    {function name=promo_quantity_tier_row key='' quantity='' percent=''}
+                        <div class="sviat_promo_tier fn_quantity_tier">
+                            <div class="input-group">
+                                <span class="input-group-addon">{$btr->sviat_promo__quantity_from|escape}</span>
+                                <input type="number" class="form-control fn_tier_quantity" name="quantity_tiers[{$key}][min_quantity]" min="2" step="1" value="{$quantity|escape}"{if ($promo->promo_type|default:'percent') != 'quantity'} disabled{/if} aria-label="{$btr->sviat_promo__quantity_from|escape}"/>
+                                <span class="input-group-addon">{$btr->sviat_promo__quantity_unit|escape}</span>
+                            </div>
+                            <div class="input-group">
+                                <input type="number" class="form-control fn_tier_percent" name="quantity_tiers[{$key}][percent]" min="0.01" max="100" step="0.01" value="{$percent|escape}"{if ($promo->promo_type|default:'percent') != 'quantity'} disabled{/if} aria-label="{$btr->sviat_promo__quantity_percent|escape}"/>
+                                <span class="input-group-addon">%</span>
+                            </div>
+                            <button type="button" class="btn_close fn_quantity_tier_remove" title="{$btr->sviat_promo__quantity_remove|escape}" aria-label="{$btr->sviat_promo__quantity_remove|escape}">
+                                {include file='svg_icon.tpl' svgId='trash'}
+                            </button>
+                        </div>
+                    {/function}
+                    <div class="row mt-1 fn_promo_type_section" data-show-for="quantity"{if ($promo->promo_type|default:'percent') != 'quantity'} style="display:none"{/if}>
+                        <div class="col-lg-6 col-md-12">
+                            <div class="heading_label">{$btr->sviat_promo__quantity_tiers|escape}</div>
+                            <div class="sviat_promo_tiers fn_quantity_tiers" data-invalid="{$btr->sviat_promo__quantity_invalid_tiers|escape}">
+                                {foreach $promo_quantity_tiers as $tier}
+                                    {promo_quantity_tier_row key=$tier@iteration quantity=$tier.min_quantity percent=$tier.percent}
+                                {/foreach}
+                            </div>
+                            <template class="fn_quantity_tier_template">
+                                {promo_quantity_tier_row key='__KEY__'}
+                            </template>
+                            <button type="button" class="btn btn_small btn-info fn_quantity_tier_add">
+                                {include file='svg_icon.tpl' svgId='plus'}
+                                <span>{$btr->sviat_promo__quantity_add|escape}</span>
+                            </button>
+                        </div>
+                        <div class="col-lg-6 col-md-12">
+                            <p class="text_grey text_13 mb-0 sviat_promo_tiers_hint">{$btr->sviat_promo__quantity_hint|escape}</p>
+                        </div>
+                    </div>
+
+                    <div class="row mt-1 fn_promo_type_section" data-show-for="percent,fixed,quantity"{if !in_array($promo->promo_type|default:'percent', ['percent','fixed','quantity'])} style="display:none"{/if}>
+                        <div class="col-lg-12 col-md-12 col-sm-12">
+                            <label class="switch switch-default">
+                                <input type="hidden" name="round_final_price" value="0" />
+                                <input class="switch-input" name="round_final_price" value="1" type="checkbox" {if !empty($promo->round_final_price)}checked=""{/if} />
+                                <span class="switch-label"></span>
+                                <span class="switch-handle"></span>
+                            </label>
+                            <span class="ml-h">{$btr->sviat_promo__round_label|escape}</span>
+                            <i class="fn_tooltips ml-q" title="{$btr->sviat_promo__round_hint|escape}">
+                                {include file='svg_icon.tpl' svgId='icon_tooltips'}
+                            </i>
+                        </div>
                     </div>
 
                     {* ── Рядок 4: Діапазон дат ── *}
@@ -879,6 +933,62 @@
 </form>
 
 <style>
+    .sviat_promo_tiers {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    .sviat_promo_tier {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 130px) 36px;
+        gap: 8px;
+        align-items: center;
+        max-width: 440px;
+    }
+    .sviat_promo_tier .input-group {
+        margin: 0;
+        min-width: 0;
+    }
+    /* Адмінка розраховує input-group на поле зліва й один підпис справа, а тут «від [N] шт.». */
+    .sviat_promo_tier .input-group .form-control {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .sviat_promo_tier .input-group > * {
+        border-radius: 0;
+    }
+    .sviat_promo_tier .input-group > :first-child {
+        border-top-left-radius: var(--ok-radius-control, 6px);
+        border-bottom-left-radius: var(--ok-radius-control, 6px);
+    }
+    .sviat_promo_tier .input-group > :last-child {
+        border-top-right-radius: var(--ok-radius-control, 6px);
+        border-bottom-right-radius: var(--ok-radius-control, 6px);
+    }
+    .sviat_promo_tier .input-group > .input-group-addon:first-child {
+        border-right: 0;
+    }
+    .sviat_promo_tier .fn_quantity_tier_remove {
+        width: 36px;
+        height: 36px;
+        border-radius: var(--ok-radius-control, 6px);
+        color: var(--ok-ink-muted, #676e75);
+    }
+    .sviat_promo_tier .fn_quantity_tier_remove:hover,
+    .sviat_promo_tier .fn_quantity_tier_remove:focus-visible {
+        color: var(--ok-danger, #c8352c);
+        background: var(--ok-danger-soft, #fbebea);
+    }
+    .sviat_promo_tiers_hint {
+        padding-top: 26px;
+    }
+    @media (max-width: 991px) {
+        .sviat_promo_tiers_hint {
+            padding-top: 0;
+            margin-top: 8px;
+        }
+    }
     @media (min-width: 1600px) {
         .fn_promo_images_grid .fn_promo_image_col {
             max-width: 20%;
@@ -1255,3 +1365,54 @@
 
 }(jQuery));
 </script>
+{literal}
+<script>
+(function ($) {
+    'use strict';
+    var $tiers = $('.fn_quantity_tiers');
+    var newTierIndex = 0;
+
+    $(document).on('click', '.fn_quantity_tier_add', function () {
+        newTierIndex++;
+        var last = parseInt($tiers.find('.fn_tier_quantity').last().val(), 10) || 1;
+        var html = $('.fn_quantity_tier_template').html().replace(/__KEY__/g, 'new' + newTierIndex);
+        var $row = $(html);
+        $row.find('input').prop('disabled', false);
+        $row.find('.fn_tier_quantity').val(last + 1);
+        $tiers.append($row);
+        $row.find('.fn_tier_percent').trigger('focus');
+    });
+
+    // Приховані поля порогів інакше блокували б збереження акцій інших типів браузерною валідацією.
+    $(document).on('change changed.bs.select', '#fn_promo_type_select', function () {
+        $tiers.find('input').prop('disabled', $(this).val() !== 'quantity');
+    });
+
+    $(document).on('click', '.fn_quantity_tier_remove', function () {
+        if ($tiers.children('.fn_quantity_tier').length > 1) {
+            $(this).closest('.fn_quantity_tier').remove();
+        }
+    });
+
+    $(document).on('submit', 'form.fn_fast_button', function (event) {
+        if ($('#fn_promo_type_select').val() !== 'quantity') {
+            return;
+        }
+        var seen = {};
+        var valid = true;
+        $tiers.children('.fn_quantity_tier').each(function () {
+            var qty = parseInt($(this).find('.fn_tier_quantity').val(), 10);
+            var pct = parseFloat($(this).find('.fn_tier_percent').val());
+            if (!Number.isInteger(qty) || qty < 2 || seen[qty] || !(pct > 0 && pct <= 100)) {
+                valid = false;
+            }
+            seen[qty] = true;
+        });
+        if (!valid) {
+            event.preventDefault();
+            window.alert($tiers.attr('data-invalid'));
+        }
+    });
+}(jQuery));
+</script>
+{/literal}

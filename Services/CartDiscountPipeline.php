@@ -48,11 +48,12 @@ class CartDiscountPipeline
             return;
         }
 
+        $this->clearPromoPriceDisplay($cart);
         $this->eligibility->resetCache();
 
         /** @var PromoCampaignEntity $campaigns */
         $campaigns = $this->entityFactory->get(PromoCampaignEntity::class);
-        $promos = $campaigns->find([
+        $promos = $campaigns->noLimit()->find([
             'cart_active' => 1,
             'cart_promos' => 1,
         ]);
@@ -67,6 +68,8 @@ class CartDiscountPipeline
 
         $this->applyPercentAndFixedFallback($cart, $promos);
         $this->rebuildSviatPromoTotals($cart);
+        // Суми лише для шаблонів: знижка вже в total_price, віднімати її вдруге не можна.
+        $this->preparePromoPriceDisplay($cart);
 
         foreach ($promos as $promo) {
             if (!$this->eligibility->campaignMatchesCart($cart, $promo)) {
@@ -140,13 +143,19 @@ class CartDiscountPipeline
                 if ($pct <= 0 || $pct > 100) {
                     continue;
                 }
-                $unitPriceAfter = $this->roundPrice($unitPriceBefore * (100 - $pct) / 100);
+                $unitPriceAfter = PromoPriceRounding::price($promo, $unitPriceBefore * (100 - $pct) / 100, $this->currencyPrecision, $unitPriceBefore);
+            } elseif ($type === PromoCampaignEntity::TYPE_QUANTITY) {
+                $pct = $this->eligibility->quantityPercentForPurchase($purchase, $cart, $promo);
+                if ($pct <= 0) {
+                    continue;
+                }
+                $unitPriceAfter = PromoPriceRounding::price($promo, $unitPriceBefore * (100 - $pct) / 100, $this->currencyPrecision, $unitPriceBefore);
             } elseif ($type === PromoCampaignEntity::TYPE_FIXED) {
                 $fixed = (float) ($promo->discount_fixed ?? 0);
                 if ($fixed <= 0 || $unitPriceBefore < $fixed) {
                     continue;
                 }
-                $unitPriceAfter = $this->roundPrice($unitPriceBefore - $fixed);
+                $unitPriceAfter = PromoPriceRounding::price($promo, $unitPriceBefore - $fixed, $this->currencyPrecision, $unitPriceBefore);
             } else {
                 continue;
             }
@@ -156,7 +165,7 @@ class CartDiscountPipeline
                 continue;
             }
 
-            $discount = $this->buildSviatPromoDiscount($promo, $unitPriceBefore, $unitPriceAfter);
+            $discount = $this->buildSviatPromoDiscount($promo, $unitPriceBefore, $unitPriceAfter, $type === PromoCampaignEntity::TYPE_QUANTITY ? $pct : null);
             $purchase->discounts[] = $discount;
             $this->appendToCartPurchaseDiscountTotals($cart, $discount, $amount);
 
@@ -167,6 +176,51 @@ class CartDiscountPipeline
             if ($promoId > 0 && !isset($appliedPromoIds[$promoId])) {
                 $this->appendApplied($promo);
                 $appliedPromoIds[$promoId] = true;
+            }
+        }
+    }
+
+    /** Інакше після зміни кількості чи купона в кошику лишилась би стара закреслена ціна. */
+    private function clearPromoPriceDisplay(Cart $cart): void
+    {
+        foreach ($cart->purchases as $purchase) {
+            unset(
+                $purchase->meta->sviat_promo_original_unit_price,
+                $purchase->meta->sviat_promo_original_line_price,
+                $purchase->meta->sviat_promo_saved_line_price
+            );
+        }
+    }
+
+    /** Закреслена ціна для кошика й оформлення — із фактично застосованої знижки, а не з compare_price. */
+    private function preparePromoPriceDisplay(Cart $cart): void
+    {
+        foreach ($cart->purchases as $purchase) {
+            if ($this->eligibility->lineIsBonusGift($purchase)) {
+                continue;
+            }
+            if (empty($purchase->discounts)) {
+                continue;
+            }
+
+            $amount = (int) $purchase->amount;
+            if ($amount <= 0) {
+                continue;
+            }
+
+            foreach ($purchase->discounts as $discount) {
+                if (!is_object($discount) || ($discount->sign ?? '') !== 'sviat_promo') {
+                    continue;
+                }
+                $before = (float) ($discount->priceBeforeDiscount ?? 0);
+                $after = (float) ($discount->priceAfterDiscount ?? 0);
+                if ($before <= 0 || $after < 0 || $before <= $after + 0.00001) {
+                    continue;
+                }
+                $purchase->meta->sviat_promo_original_unit_price = $this->roundPrice($before);
+                $purchase->meta->sviat_promo_original_line_price = $this->roundPrice($before * $amount);
+                $purchase->meta->sviat_promo_saved_line_price = $this->roundPrice(($before - $after) * $amount);
+                break;
             }
         }
     }
@@ -205,6 +259,20 @@ class CartDiscountPipeline
                 ? (float) $purchase->meta->undiscounted_total_price
                 : (float) ($purchase->undiscounted_price ?? 0) * $amount;
 
+            // Core застосовує відсотки до одиниці. Після нього округлюємо
+            // ФАКТИЧНУ ціну одиниці та множимо на кількість, щоб зберегти
+            // рівність у кошику, знижках і фінальному замовленні.
+            if (!empty($purchase->meta->sviat_promo_round_final_price)) {
+                $unitBeforeRounding = $lineBefore / $amount;
+                $roundedUnit = PromoPriceRounding::price(
+                    (object) ['round_final_price' => 1],
+                    $lineAfter / $amount,
+                    $this->currencyPrecision,
+                    $unitBeforeRounding
+                );
+                $lineAfter = $roundedUnit * $amount;
+            }
+            unset($purchase->meta->sviat_promo_round_final_price);
             $lineAfter = $this->roundPrice(max(0.0, $lineAfter));
             $lineBefore = $this->roundPrice(max(0.0, $lineBefore));
 
@@ -221,9 +289,8 @@ class CartDiscountPipeline
                     $discount->absoluteDiscount = $this->roundPrice(
                         max(0.0, $discount->priceBeforeDiscount - $discount->priceAfterDiscount)
                     );
-                    $discount->percentDiscount = $discount->priceBeforeDiscount > 0
-                        ? round($discount->absoluteDiscount / ($discount->priceBeforeDiscount / 100), 2)
-                        : 0.0;
+                    // Показуємо налаштований відсоток, а не ефективний після округлення ціни; суми — фактичні.
+                    $discount->percentDiscount = $this->displayPercentForDiscount($discount);
                 }
             }
         }
@@ -234,7 +301,7 @@ class CartDiscountPipeline
      * позиції: знак, ключі перекладу, тип і значення. null — кампанія до позиції
      * не застосовна.
      */
-    public function availablePurchaseDiscount(object $promo, float $unitPrice): ?Discount
+    public function availablePurchaseDiscount(object $promo, float $unitPrice, ?float $quantityPercent = null): ?Discount
     {
         $discount = new Discount();
         $discount->sign = 'sviat_promo';
@@ -250,6 +317,12 @@ class CartDiscountPipeline
             }
             $discount->type = 'percent';
             $discount->value = $pct;
+        } elseif ($type === PromoCampaignEntity::TYPE_QUANTITY) {
+            if ($quantityPercent === null || $quantityPercent <= 0 || $quantityPercent > 100) {
+                return null;
+            }
+            $discount->type = 'percent';
+            $discount->value = $quantityPercent;
         } elseif ($type === PromoCampaignEntity::TYPE_FIXED) {
             $fixed = (float) ($promo->discount_fixed ?? 0);
             if ($fixed <= 0 || $unitPrice < $fixed) {
@@ -268,9 +341,9 @@ class CartDiscountPipeline
      * Той самий шлях, що в ядрі (parseSet → prepareDiscounts): без нього
      * знижка йшла в БД без type (NOT NULL) і без перекладу назви.
      */
-    private function buildSviatPromoDiscount(object $promo, float $priceBefore, float $priceAfter): Discount
+    private function buildSviatPromoDiscount(object $promo, float $priceBefore, float $priceAfter, ?float $quantityPercent = null): Discount
     {
-        $available = $this->availablePurchaseDiscount($promo, $priceBefore);
+        $available = $this->availablePurchaseDiscount($promo, $priceBefore, $quantityPercent);
         $signs = $this->discountsHelper->parseSet((object) ['set' => '$sviat_promo', 'partial' => false])['purchase'] ?? [];
         $prepared = $available !== null ? $this->discountsHelper->prepareDiscounts($signs, ['sviat_promo' => $available]) : [];
         $discount = $prepared[0] ?? $available ?? new Discount();
@@ -278,9 +351,7 @@ class CartDiscountPipeline
         $discount->priceBeforeDiscount = $this->roundPrice($priceBefore);
         $discount->priceAfterDiscount = $this->roundPrice($priceAfter);
         $discount->absoluteDiscount = $this->roundPrice(max(0.0, $priceBefore - $priceAfter));
-        $discount->percentDiscount = $priceBefore > 0
-            ? round($discount->absoluteDiscount / ($priceBefore / 100), 2)
-            : 0.0;
+        $discount->percentDiscount = $this->displayPercentForDiscount($discount);
 
         return $discount;
     }
@@ -296,9 +367,7 @@ class CartDiscountPipeline
             $discountForTotal->absoluteDiscount *= $amount;
             $discountForTotal->priceBeforeDiscount *= $amount;
             $discountForTotal->priceAfterDiscount *= $amount;
-            $discountForTotal->percentDiscount = $discountForTotal->priceBeforeDiscount > 0
-                ? round($discountForTotal->absoluteDiscount / ($discountForTotal->priceBeforeDiscount / 100), 2)
-                : 0.0;
+            $discountForTotal->percentDiscount = $this->displayPercentForDiscount($discountForTotal);
             $cart->total_purchases_discounts[$discount->sign] = $discountForTotal;
 
             return;
@@ -308,9 +377,39 @@ class CartDiscountPipeline
         $total->absoluteDiscount += $discount->absoluteDiscount * $amount;
         $total->priceBeforeDiscount += $discount->priceBeforeDiscount * $amount;
         $total->priceAfterDiscount += $discount->priceAfterDiscount * $amount;
-        $total->percentDiscount = $total->priceBeforeDiscount > 0
-            ? round($total->absoluteDiscount / ($total->priceBeforeDiscount / 100), 2)
+        // В один підсумковий рядок можуть зійтися різні відсотки (бренди, пороги).
+        // Налаштований відсоток лишаємо лише коли він спільний, інакше — ефективний.
+        $configuredRate = $this->configuredPercent($discount);
+        $existingRate = $this->configuredPercent($total);
+        if ($configuredRate !== null && $existingRate !== null
+            && abs($configuredRate - $existingRate) < 0.00001) {
+            $total->percentDiscount = $configuredRate;
+        } else {
+            $total->percentDiscount = $this->effectivePercent($total);
+            // Інакше наступний рядок порівнювався б із відсотком першого.
+            $total->type = 'combined';
+        }
+    }
+
+    private function configuredPercent(Discount $discount): ?float
+    {
+        if ($discount->type !== 'percent') {
+            return null;
+        }
+        $value = (float) $discount->value;
+        return ($value > 0 && $value <= 100) ? round($value, 2) : null;
+    }
+
+    private function effectivePercent(Discount $discount): float
+    {
+        return $discount->priceBeforeDiscount > 0
+            ? round($discount->absoluteDiscount / ($discount->priceBeforeDiscount / 100), 2)
             : 0.0;
+    }
+
+    private function displayPercentForDiscount(Discount $discount): float
+    {
+        return $this->configuredPercent($discount) ?? $this->effectivePercent($discount);
     }
 
     private function rebuildSviatPromoTotals(Cart $cart): void

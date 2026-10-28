@@ -56,6 +56,7 @@ class CampaignPayloadRequest
         $type = $this->request->post('promo_type', 'string');
         $allowed = [
             PromoCampaignEntity::TYPE_PERCENT,
+            PromoCampaignEntity::TYPE_QUANTITY,
             PromoCampaignEntity::TYPE_FIXED,
             PromoCampaignEntity::TYPE_GIFT,
             PromoCampaignEntity::TYPE_BUNDLE_3X2,
@@ -63,8 +64,18 @@ class CampaignPayloadRequest
         ];
         $promo->promo_type = in_array($type, $allowed, true) ? $type : PromoCampaignEntity::TYPE_GIFT;
 
-        $promo->priority = (int) $this->request->post('priority', 'integer');
         $promo->min_order_amount = (float) str_replace(',', '.', (string) $this->request->post('min_order_amount', 'string'));
+
+        // У старих акціях перемикач вимкнено. Параметр діє лише для цінових акцій.
+        $roundFinalPrice = $this->request->post('round_final_price');
+        if (is_array($roundFinalPrice)) {
+            $roundFinalPrice = end($roundFinalPrice);
+        }
+        $promo->round_final_price = in_array($promo->promo_type, [
+            PromoCampaignEntity::TYPE_PERCENT,
+            PromoCampaignEntity::TYPE_FIXED,
+            PromoCampaignEntity::TYPE_QUANTITY,
+        ], true) && (string) $roundFinalPrice === '1' ? 1 : 0;
 
         $promo->discount_percent = null;
         $promo->discount_fixed = null;
@@ -133,6 +144,40 @@ class CampaignPayloadRequest
         );
 
         return $promo;
+    }
+
+    /**
+     * Пороги акції «за кількістю», відсортовані за кількістю.
+     * Будь-який некоректний рядок обнуляє весь набір: часткова шкала мовчки дала б іншу знижку.
+     *
+     * @return array<int, array{min_quantity: int, percent: float}>
+     */
+    public function postQuantityTiers(): array
+    {
+        $raw = $this->request->post('quantity_tiers');
+        if (!is_array($raw)) {
+            return [];
+        }
+        $tiers = [];
+        foreach ($raw as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $quantityRaw = trim((string) ($row['min_quantity'] ?? ''));
+            $percentRaw = str_replace(',', '.', trim((string) ($row['percent'] ?? '')));
+            if (!preg_match('/^[0-9]+$/D', $quantityRaw) ||
+                !preg_match('/^(?:[0-9]+)(?:\.[0-9]{1,2})?$/D', $percentRaw)) {
+                return [];
+            }
+            $quantity = (int) $quantityRaw;
+            $percent = (float) $percentRaw;
+            if ($quantity < 2 || $quantity > 100000 || $percent <= 0 || $percent > 100 || isset($tiers[$quantity])) {
+                return [];
+            }
+            $tiers[$quantity] = ['min_quantity' => $quantity, 'percent' => $percent];
+        }
+        ksort($tiers, SORT_NUMERIC);
+        return array_values($tiers);
     }
 
     /**

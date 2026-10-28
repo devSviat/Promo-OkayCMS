@@ -16,6 +16,7 @@ class PromoCampaignEntity extends Entity
     public const DEFAULT_CAPTION_BANNER_HEIGHT = 80;
 
     public const TYPE_PERCENT = 'percent';
+    public const TYPE_QUANTITY = 'quantity';
     public const TYPE_FIXED = 'fixed';
     public const TYPE_GIFT = 'gift';
     public const TYPE_BUNDLE_3X2 = 'bundle_3x2';
@@ -63,11 +64,11 @@ class PromoCampaignEntity extends Entity
         'feed_enabled',
         'last_modify',
         'promo_type',
-        'priority',
         'position',
         'min_order_amount',
         'discount_percent',
         'discount_fixed',
+        'round_final_price',
         'exclude_no_image',
     ];
 

@@ -33,3 +33,8 @@ $lang['sviat_promo_page__upcoming_badge']           = 'Upcoming';
 $lang['sviat_promo_page__starts']                   = 'Start date:';
 $lang['sviat_promo_page__time_to_start']            = 'Starts in';
 $lang['sviat_promo_page__upcoming_products_hidden'] = 'Discounts will be available when the campaign starts.';
+
+$lang['sviat_promo__discount_included'] = 'Already included in item prices';
+
+$lang['sviat_promo__price_before'] = 'Price before promotion';
+$lang['sviat_promo__unit'] = 'pc.';

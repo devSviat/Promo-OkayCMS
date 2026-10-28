@@ -9,6 +9,7 @@ use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoFeedLinkEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoRewardLineEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoScopeEntity;
+use Okay\Modules\Sviat\Promo\Entities\PromoQuantityTierEntity;
 
 /**
  * Доступ до кампаній та пов'язаних сутностей (область дії, подарункові SKU, feed-лінки).
@@ -23,6 +24,9 @@ class CampaignRepository
 
     /** @var PromoScopeEntity */
     private $scope;
+
+    /** @var PromoQuantityTierEntity */
+    private $quantityTierRows;
 
     /** @var PromoFeedLinkEntity */
     private $feedLinks;
@@ -42,6 +46,7 @@ class CampaignRepository
         $this->rewardLines = $entityFactory->get(PromoRewardLineEntity::class);
         $this->scope       = $entityFactory->get(PromoScopeEntity::class);
         $this->feedLinks   = $entityFactory->get(PromoFeedLinkEntity::class);
+        $this->quantityTierRows = $entityFactory->get(PromoQuantityTierEntity::class);
         $this->config      = $config;
         $this->imageCore   = $imageCore;
     }
@@ -176,6 +181,7 @@ class CampaignRepository
         foreach ((array) $ids as $id) {
             $this->deleteObject($id);
             $this->deleteGift($id);
+            $this->quantityTierRows->deleteByPromoId((int) $id);
             $this->feedLinks->deleteByPromoId((int) $id);
             $p = $this->campaigns->get($id);
             if (!empty($p->id)) {

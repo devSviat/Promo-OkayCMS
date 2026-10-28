@@ -63,6 +63,10 @@ class PromoProductDisplayService
         $discountCampaign = null;
         foreach ($allActive as $c) {
             $type = strtolower(trim((string) ($c->promo_type ?? '')));
+            // Ціну зі знижкою не можна гарантувати без складу кошика, якщо заданий мінімум замовлення.
+            if ((float) ($c->min_order_amount ?? 0) > 0) {
+                continue;
+            }
             if ($type === PromoCampaignEntity::TYPE_PERCENT || $type === PromoCampaignEntity::TYPE_FIXED) {
                 $discountCampaign = $c;
                 break;
@@ -74,7 +78,7 @@ class PromoProductDisplayService
     public function applyDiscountDisplay(object $product, ?object $campaign): void
     {
         $pid = (int) ($product->id ?? 0);
-        if ($campaign === null) {
+        if ($campaign === null || (float) ($campaign->min_order_amount ?? 0) > 0) {
             return;
         }
 
@@ -101,14 +105,14 @@ class PromoProductDisplayService
 
                 return;
             }
-            $effective = round($base * (100 - $pct) / 100, $this->currencyPrecision);
+            $effective = PromoPriceRounding::price($campaign, $base * (100 - $pct) / 100, $this->currencyPrecision, $base);
             $product->sviat_promo_discount_percent = $pct;
         } elseif ($type === PromoCampaignEntity::TYPE_FIXED) {
             $fixed = (float) ($campaign->discount_fixed ?? 0);
             if ($fixed <= 0 || $base < $fixed) {
                 return;
             }
-            $effective = round($base - $fixed, $this->currencyPrecision);
+            $effective = PromoPriceRounding::price($campaign, $base - $fixed, $this->currencyPrecision, $base);
             $product->sviat_promo_discount_percent = round(($fixed / $base) * 100, 2);
         } else {
             return;

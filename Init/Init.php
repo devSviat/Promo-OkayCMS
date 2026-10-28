@@ -3,6 +3,9 @@
 namespace Okay\Modules\Sviat\Promo\Init;
 
 use Okay\Core\Cart;
+use Okay\Core\Database;
+use Okay\Core\QueryFactory;
+use Okay\Core\ServiceLocator;
 use Okay\Core\Classes\Purchase;
 use Okay\Core\Modules\AbstractInit;
 use Okay\Core\Modules\EntityField;
@@ -27,6 +30,7 @@ use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoFeedLinkEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoRewardLineEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoScopeEntity;
+use Okay\Modules\Sviat\Promo\Entities\PromoQuantityTierEntity;
 use Okay\Modules\Sviat\Promo\ExtendsEntities\ProductsPromoFilter;
 use Okay\Modules\Sviat\Promo\Extenders\PromoCampaignCacheInvalidator;
 use Okay\Modules\Sviat\Promo\Extenders\PromoCartHooks;
@@ -79,24 +83,25 @@ class Init extends AbstractInit
             new EntityField('product_caption_mode')->setTypeTinyInt(1, true)->setDefault(0),
             new EntityField('promo_type')->setTypeEnum([
                 PromoCampaignEntity::TYPE_PERCENT,
+                PromoCampaignEntity::TYPE_QUANTITY,
                 PromoCampaignEntity::TYPE_FIXED,
                 PromoCampaignEntity::TYPE_GIFT,
                 PromoCampaignEntity::TYPE_BUNDLE_3X2,
                 PromoCampaignEntity::TYPE_FREE_SHIPPING,
             ], false)->setDefault(PromoCampaignEntity::TYPE_PERCENT)->setIndex(),
-            new EntityField('min_order_amount')->setTypeDecimal(14, 4)->setDefault(0),
-            new EntityField('discount_percent')->setTypeDecimal(10, 2)->setNullable(),
-            new EntityField('discount_fixed')->setTypeDecimal(14, 4)->setNullable(),
+            ...self::moneyFields(),
+            new EntityField('round_final_price')->setTypeTinyInt(1, true)->setDefault(0),
             new EntityField('has_date_range')->setTypeTinyInt(1, true)->setDefault(0)->setIndex(),
             new EntityField('date_start')->setTypeDatetime()->setNullable()->setIndex(),
             new EntityField('date_end')->setTypeDatetime()->setNullable()->setIndex(),
             new EntityField('feed_enabled')->setTypeTinyInt(1, true)->setDefault(0)->setIndex(),
             new EntityField('exclude_no_image')->setTypeTinyInt(1, true)->setDefault(0),
             new EntityField('visible')->setTypeTinyInt(1, true)->setDefault(0)->setIndex(),
-            new EntityField('priority')->setTypeInt(11, true)->setDefault(0)->setIndex(),
             new EntityField('position')->setTypeInt(11, true)->setDefault(0)->setIndex(),
             new EntityField('last_modify')->setTypeTimestamp(),
         ]);
+
+        $this->migrateEntityTable(PromoQuantityTierEntity::class, self::quantityTierFields());
 
         $this->migrateEntityTable(PromoRewardLineEntity::class, [
             new EntityField('promo_id')->setTypeInt(11)->setIndex(),
@@ -156,6 +161,7 @@ class Init extends AbstractInit
         $this->extendUpdateObject('Sviat.Promo.PromoCampaignEntity', self::PERMISSION, PromoCampaignEntity::class);
         $this->extendUpdateObject('Sviat.Promo.PromoRewardLineEntity', self::PERMISSION, PromoRewardLineEntity::class);
         $this->extendUpdateObject('Sviat.Promo.PromoScopeEntity', self::PERMISSION, PromoScopeEntity::class);
+        $this->extendUpdateObject('Sviat.Promo.PromoQuantityTierEntity', self::PERMISSION, PromoQuantityTierEntity::class);
         $this->extendUpdateObject('Sviat.Promo.PromoFeedLinkEntity', self::PERMISSION, PromoFeedLinkEntity::class);
 
         $this->extendBackendMenu('left_catalog', [
@@ -358,6 +364,86 @@ class Init extends AbstractInit
                 );
             }
         }
+    }
+
+    /**
+     * install() уже створює таблицю порогів, а update_* виконуються й на чистій
+     * інсталяції, тож голий CREATE TABLE тут упав би.
+     */
+    public function update_1_0_19(): void
+    {
+        $this->migrateEntityField(
+            PromoCampaignEntity::class,
+            new EntityField('promo_type')->setTypeEnum([
+                PromoCampaignEntity::TYPE_PERCENT,
+                PromoCampaignEntity::TYPE_QUANTITY,
+                PromoCampaignEntity::TYPE_FIXED,
+                PromoCampaignEntity::TYPE_GIFT,
+                PromoCampaignEntity::TYPE_BUNDLE_3X2,
+                PromoCampaignEntity::TYPE_FREE_SHIPPING,
+            ], false)->setDefault(PromoCampaignEntity::TYPE_PERCENT)->setIndex()
+        );
+        $this->migrateEntityField(
+            PromoCampaignEntity::class,
+            new EntityField('round_final_price')->setTypeTinyInt(1, true)->setDefault(0)
+        );
+        // До 1.0.19 точність передавалась двома числами, а setTypeDecimal() бере її одним рядком
+        // ('10,2'): колонки виходили без дробової частини, і 7.5 % зберігалось як 8 %.
+        foreach (self::moneyFields() as $field) {
+            $this->migrateEntityField(PromoCampaignEntity::class, $field);
+        }
+        if (!$this->tableExists(PromoQuantityTierEntity::getTable())) {
+            $this->migrateEntityTable(PromoQuantityTierEntity::class, self::quantityTierFields());
+        }
+        // Поля в формі не було ніколи, тож там скрізь 0, а порядок акцій задає position.
+        // На чистій інсталяції колонки вже немає; DROP COLUMN IF EXISTS не підтримує MySQL.
+        if ($this->columnExists(PromoCampaignEntity::getTable(), 'priority')) {
+            $this->runStatement('ALTER TABLE `' . PromoCampaignEntity::getTable() . '` DROP COLUMN `priority`');
+        }
+    }
+
+    /** @return EntityField[] */
+    private static function moneyFields(): array
+    {
+        return [
+            new EntityField('min_order_amount')->setTypeDecimal('14,4', false)->setDefault(0),
+            new EntityField('discount_percent')->setTypeDecimal('10,2')->setNullable(),
+            new EntityField('discount_fixed')->setTypeDecimal('14,4')->setNullable(),
+        ];
+    }
+
+    /** @return EntityField[] */
+    private static function quantityTierFields(): array
+    {
+        return [
+            new EntityField('id')->setIndexPrimaryKey()->setTypeInt(11, false)->setAutoIncrement(),
+            new EntityField('promo_id')->setTypeInt(11)->setIndex(),
+            new EntityField('min_quantity')->setTypeInt(11)->setIndex(),
+            new EntityField('percent')->setTypeDecimal('5,2', false),
+        ];
+    }
+
+    private function tableExists(string $table): bool
+    {
+        return $this->runStatement("SELECT 1 FROM `{$table}` LIMIT 1");
+    }
+
+    private function columnExists(string $table, string $column): bool
+    {
+        $database = ServiceLocator::getInstance()->getService(Database::class);
+        if (!$this->runStatement("SHOW COLUMNS FROM `{$table}` LIKE '{$column}'")) {
+            return false;
+        }
+
+        return !empty($database->result());
+    }
+
+    private function runStatement(string $statement): bool
+    {
+        $locator = ServiceLocator::getInstance();
+        $query = $locator->getService(QueryFactory::class)->newSqlQuery()->setStatement($statement);
+
+        return $locator->getService(Database::class)->query($query) === true;
     }
 
     public function update_1_0_2(): void

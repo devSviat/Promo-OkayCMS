@@ -1,6 +1,6 @@
 {
   "Okay": "4.5.3",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "moduleName": "Promo: акції та знижки",
   "vendor": {
     "email": "devsviat@proton.me",
@@ -58,7 +58,7 @@
           },
           {
             "find": "{$purchase->variant->name|escape}",
-            "appendAfter": "{if !empty($purchase->meta->sviat_promo_min_order_notice)}<div class=\"text_12 text_grey mt-q\">{$lang->discount_sviat_promo_name}: {$lang->sviat_promo__min_order_notice_from} {$purchase->meta->sviat_promo_min_order_notice->min_order_amount|convert} {$currency->sign|escape}. {$lang->sviat_promo__min_order_notice_missing} {$purchase->meta->sviat_promo_min_order_notice->missing_amount|convert} {$currency->sign|escape}.</div>{/if}{if !empty($purchase->meta->sviat_promo_bundle_hint)}<div class=\"promo_bundle_notice{if !empty($purchase->meta->sviat_promo_bundle_hint->is_applied)} is_applied{/if}\">{if !empty($purchase->meta->sviat_promo_bundle_hint->is_applied)}{$lang->sviat_promo__bundle_applied}{else}{$lang->sviat_promo__bundle_add_more} {$purchase->meta->sviat_promo_bundle_hint->need_units} {$lang->sviat_promo__bundle_units_suffix}{/if}</div>{/if}"
+            "appendAfter": "{if !empty($purchase->meta->sviat_promo_min_order_notice)}<div class=\"text_12 text_grey mt-q\">{$lang->discount_sviat_promo_name}: {$lang->sviat_promo__min_order_notice_from} {$purchase->meta->sviat_promo_min_order_notice->min_order_amount|convert} {$currency->sign|escape}. {$lang->sviat_promo__min_order_notice_missing} {$purchase->meta->sviat_promo_min_order_notice->missing_amount|convert} {$currency->sign|escape}.</div>{/if}{if !empty($purchase->meta->sviat_promo_bundle_hint)}<div class=\"promo_bundle_notice{if !empty($purchase->meta->sviat_promo_bundle_hint->is_applied)} is_applied{/if}\">{if !empty($purchase->meta->sviat_promo_bundle_hint->is_applied)}{$lang->sviat_promo__bundle_applied}{else}{$lang->sviat_promo__bundle_add_more} {$purchase->meta->sviat_promo_bundle_hint->need_units} {$lang->sviat_promo__bundle_units_suffix}{/if}</div>{/if}{if !empty($purchase->meta->sviat_promo_original_unit_price) && $purchase->meta->sviat_promo_original_unit_price > $purchase->price}<div class=\"sviat_promo_original_price\"><span>{$lang->sviat_promo__price_before}:</span> <del>{$purchase->meta->sviat_promo_original_unit_price|convert} {$currency->sign|escape}</del><span class=\"sviat_promo_unit_label\"> / {$lang->sviat_promo__unit}</span>{if $purchase->amount > 1 && !empty($purchase->meta->sviat_promo_original_line_price)}<span class=\"sviat_promo_original_line\">({$purchase->amount} &times; {$purchase->meta->sviat_promo_original_unit_price|convert} = <del>{$purchase->meta->sviat_promo_original_line_price|convert} {$currency->sign|escape}</del>)</span>{/if}</div>{/if}"
           },
           {
             "find": "purchase__remove",
@@ -79,6 +79,10 @@
             "find": "purchase__remove",
             "appendBefore": "{if !$purchase->variant->gift_product_id}",
             "appendAfter": "{/if}"
+          },
+          {
+            "find": "{$purchase->variant->name|escape}",
+            "appendAfter": "{if !empty($purchase->meta->sviat_promo_original_unit_price) && $purchase->meta->sviat_promo_original_unit_price > $purchase->price}<div class=\"sviat_promo_original_price\"><span>{$lang->sviat_promo__price_before}:</span> <del>{$purchase->meta->sviat_promo_original_unit_price|convert} {$currency->sign|escape}</del><span class=\"sviat_promo_unit_label\"> / {$lang->sviat_promo__unit}</span>{if $purchase->amount > 1 && !empty($purchase->meta->sviat_promo_original_line_price)}<span class=\"sviat_promo_original_line\">({$purchase->amount} &times; {$purchase->meta->sviat_promo_original_unit_price|convert} = <del>{$purchase->meta->sviat_promo_original_line_price|convert} {$currency->sign|escape}</del>)</span>{/if}</div>{/if}"
           }
         ]
       },
@@ -117,6 +121,15 @@
             "find": "<b>",
             "appendBefore": "{if !$purchase->gift_product_id}",
             "appendAfter": "{else}<b>{$lang->sviat_promo__gift}</b>{/if}"
+          }
+        ]
+      },
+      {
+        "file": "cart_coupon.tpl",
+        "changes": [
+          {
+            "find": "{$purchase_discount->name}",
+            "append": "{if isset($purchase_discount->sign) && $purchase_discount->sign == \"sviat_promo\"}<small class=\"sviat_promo_discount_included\">{$lang->sviat_promo__discount_included}</small>{/if}"
           }
         ]
       }

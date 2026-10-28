@@ -10,6 +10,7 @@ use Okay\Entities\FeaturesValuesEntity;
 use Okay\Entities\ProductsEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoScopeEntity;
+use Okay\Modules\Sviat\Promo\Entities\PromoQuantityTierEntity;
 
 /**
  * Перевіряє дати, мінімальну суму та відповідність товарів умовам кампанії.
@@ -20,6 +21,9 @@ class PromotionEligibility
 
     /** @var array<int, array<int, object>> */
     private $scopeCache = [];
+
+    /** @var array<int, array<int, object>> */
+    private $quantityTiersCache = [];
 
     /** @var array<int, object> */
     private $productCache = [];
@@ -258,6 +262,7 @@ class PromotionEligibility
     public function resetCache(): void
     {
         $this->scopeCache        = [];
+        $this->quantityTiersCache = [];
         $this->productCache      = [];
         $this->featureValueCache = [];
         $this->excludeNoImageCache = [];
@@ -312,6 +317,37 @@ class PromotionEligibility
         return 0;
     }
 
+    /**
+     * Сума рядка ДО розрахунку знижок (Cart::attachDiscounts виконується
+     * раніше, ніж Purchase::applyDiscounts). Не використовувати price чи
+     * meta->total_price з попереднього перерахунку для перевірки порогів.
+     */
+    private function purchaseBaseLineTotal(Purchase $purchase): float
+    {
+        if (isset($purchase->meta->undiscounted_total_price)) {
+            return max(0.0, (float) $purchase->meta->undiscounted_total_price);
+        }
+
+        return max(0.0, (float) $purchase->undiscounted_price * max(0, (int) $purchase->amount));
+    }
+
+    /** Стабільна сума для перевірки мінімуму акції під час attachDiscounts. */
+    private function getCartBaseSubtotal(Cart $cart): float
+    {
+        $sum = 0.0;
+        foreach ($cart->purchases as $purchase) {
+            if (!$this->lineIsBonusGift($purchase)) {
+                $sum += $this->purchaseBaseLineTotal($purchase);
+            }
+        }
+        return $sum;
+    }
+
+    /**
+     * Поточна вартість кошика: після знижок, якщо вони вже розраховані;
+     * інакше — без знижок. Не вважати незаповнені meta / price нульовим
+     * замовленням, бо так виникає хибне «не вистачає 100 грн».
+     */
     public function getCartSubtotal(Cart $cart): float
     {
         $sum = 0.0;
@@ -319,16 +355,12 @@ class PromotionEligibility
             if ($this->lineIsBonusGift($purchase)) {
                 continue;
             }
-            $totalPrice = 0.0;
-            if (!empty($purchase->meta) && isset($purchase->meta->total_price)) {
-                $totalPrice = (float) $purchase->meta->total_price;
-            } elseif (isset($purchase->price) && isset($purchase->amount)) {
-                // Запасний варіант: amount × price, якщо meta->total_price відсутня
-                $totalPrice = (float) $purchase->price * (int) $purchase->amount;
+            if (isset($purchase->meta->total_price)) {
+                $sum += max(0.0, (float) $purchase->meta->total_price);
+            } else {
+                $sum += $this->purchaseBaseLineTotal($purchase);
             }
-            $sum += $totalPrice;
         }
-
         return $sum;
     }
 
@@ -409,6 +441,37 @@ class PromotionEligibility
     }
 
     /**
+     * Відсоток порогу акції «за кількістю» для позиції. Рахуються одиниці всіх
+     * позицій кошика з області дії акції; подарунки й виключені товари не входять.
+     */
+    public function quantityPercentForPurchase(Purchase $purchase, Cart $cart, object $campaign): float
+    {
+        if ((string) ($campaign->promo_type ?? '') !== PromoCampaignEntity::TYPE_QUANTITY) {
+            return 0.0;
+        }
+        $campaignId = (int) ($campaign->id ?? 0);
+        if ($campaignId < 1 || $this->lineIsBonusGift($purchase) || !$this->purchaseMatchesCampaign($purchase, $campaignId)) {
+            return 0.0;
+        }
+        $quantity = 0;
+        foreach ($this->purchasesInCampaignScope($cart, $campaignId) as $item) {
+            $quantity += max(0, (int) $item->amount);
+        }
+
+        return QuantityTierCalculator::percentForQuantity($this->tiersForCampaign($campaignId), $quantity);
+    }
+
+    private function tiersForCampaign(int $campaignId): array
+    {
+        if (!isset($this->quantityTiersCache[$campaignId])) {
+            /** @var PromoQuantityTierEntity $entity */
+            $entity = $this->entityFactory->get(PromoQuantityTierEntity::class);
+            $this->quantityTiersCache[$campaignId] = $entity->noLimit()->find(['promo_id' => $campaignId]);
+        }
+        return $this->quantityTiersCache[$campaignId];
+    }
+
+    /**
      * Відсоткова/фіксована кампанія для позиції: найвищий пріоритет серед підходящих.
      *
      * @param array<int, object> $promos зазвичай find(cart_active, cart_promos)
@@ -430,6 +493,10 @@ class PromotionEligibility
             } elseif ($type === PromoCampaignEntity::TYPE_FIXED) {
                 $fixed = (float) ($promo->discount_fixed ?? 0);
                 if ($fixed <= 0) {
+                    continue;
+                }
+            } elseif ($type === PromoCampaignEntity::TYPE_QUANTITY) {
+                if ($this->quantityPercentForPurchase($purchase, $cart, $promo) <= 0) {
                     continue;
                 }
             } else {
@@ -562,7 +629,7 @@ class PromotionEligibility
             return true;
         }
 
-        $subtotal = $this->getCartSubtotal($cart);
+        $subtotal = $this->getCartBaseSubtotal($cart);
         if ($subtotal < $min) {
             return false;
         }
@@ -574,7 +641,7 @@ class PromotionEligibility
 
     public function cartSubtotalAfterOwnDiscount(object $campaign, Cart $cart): float
     {
-        $subtotal = $this->getCartSubtotal($cart);
+        $subtotal = $this->getCartBaseSubtotal($cart);
         $discountAmount = $this->estimateCampaignDiscountForCart($campaign, $cart);
 
         return max(0.0, $subtotal - $discountAmount);
@@ -588,7 +655,7 @@ class PromotionEligibility
         }
 
         $type = $this->normalizePromoType($campaign->promo_type ?? '');
-        if ($type !== PromoCampaignEntity::TYPE_PERCENT && $type !== PromoCampaignEntity::TYPE_FIXED) {
+        if (!in_array($type, [PromoCampaignEntity::TYPE_PERCENT, PromoCampaignEntity::TYPE_FIXED, PromoCampaignEntity::TYPE_QUANTITY], true)) {
             return 0.0;
         }
 
@@ -602,13 +669,14 @@ class PromotionEligibility
             }
 
             $amount = max(1, (int) ($purchase->amount ?? 0));
-            $lineTotal = 0.0;
-            if (!empty($purchase->meta) && isset($purchase->meta->total_price)) {
-                $lineTotal = (float) $purchase->meta->total_price;
-            } elseif (isset($purchase->price) && isset($purchase->amount)) {
-                $lineTotal = (float) $purchase->price * (int) $purchase->amount;
-            }
+            $lineTotal = $this->purchaseBaseLineTotal($purchase);
             if ($lineTotal <= 0) {
+                continue;
+            }
+
+            if ($type === PromoCampaignEntity::TYPE_QUANTITY) {
+                $pct = $this->quantityPercentForPurchase($purchase, $cart, $campaign);
+                $discountTotal += $lineTotal * ($pct / 100);
                 continue;
             }
 
