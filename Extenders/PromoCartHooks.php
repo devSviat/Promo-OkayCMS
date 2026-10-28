@@ -82,6 +82,9 @@ class PromoCartHooks implements ExtensionInterface
      */
     public function attachSviatPromoPurchaseDiscounts(Cart $cart)
     {
+        // Кошик перераховується на тих самих Purchase: поріг, досягнутий на 2 шт., мусить зникнути на 1 шт.
+        // Тому чистимо до ранніх виходів нижче.
+        $this->clearPreviousPromoCandidates($cart);
         if ($cart->isEmpty) {
             return $cart;
         }
@@ -90,7 +93,7 @@ class PromoCartHooks implements ExtensionInterface
 
         /** @var PromoCampaignEntity $campaignsEntity */
         $campaignsEntity = $this->entityFactory->get(PromoCampaignEntity::class);
-        $promos = $campaignsEntity->find([
+        $promos = $campaignsEntity->noLimit()->find([
             'cart_active' => 1,
             'cart_promos' => 1,
         ]);
@@ -106,7 +109,7 @@ class PromoCartHooks implements ExtensionInterface
             if (!isset($purchase->meta) || !is_object($purchase->meta)) {
                 $purchase->meta = new \stdClass();
             }
-            unset($purchase->meta->sviat_promo_min_order_notice);
+            unset($purchase->meta->sviat_promo_min_order_notice, $purchase->meta->sviat_promo_round_final_price);
 
             $promo = $this->eligibility->pickBestDiscountCampaignForPurchase($purchase, $cart, $promos);
             if ($promo === null) {
@@ -124,15 +127,36 @@ class PromoCartHooks implements ExtensionInterface
                 continue;
             }
 
-            $d = $this->discountPipeline->availablePurchaseDiscount($promo, (float) ($purchase->undiscounted_price ?? 0));
+            $quantityPercent = $promo->promo_type === PromoCampaignEntity::TYPE_QUANTITY
+                ? $this->eligibility->quantityPercentForPurchase($purchase, $cart, $promo)
+                : null;
+            $d = $this->discountPipeline->availablePurchaseDiscount($promo, (float) ($purchase->undiscounted_price ?? 0), $quantityPercent);
             if ($d === null) {
                 continue;
             }
 
             $purchase->availableDiscounts['sviat_promo'] = $d;
+            // Маркер для постобробки фінальної ціни вже після штатного механізму Discount.
+            // Лише цей конкретний рядок та саме ця акція можуть бути округлені.
+            $purchase->meta->sviat_promo_round_final_price = !empty($promo->round_final_price);
         }
 
         return $cart;
+    }
+
+    /**
+     * Лише кандидати й прапорці цього модуля: знижки ядра та інших модулів не чіпаємо,
+     * а застосовані ціни перераховує Purchase::applyDiscounts уже після цього хука.
+     */
+    private function clearPreviousPromoCandidates(Cart $cart): void
+    {
+        foreach ($cart->purchases as $purchase) {
+            unset(
+                $purchase->availableDiscounts['sviat_promo'],
+                $purchase->meta->sviat_promo_min_order_notice,
+                $purchase->meta->sviat_promo_round_final_price
+            );
+        }
     }
 
     /**
@@ -151,6 +175,10 @@ class PromoCartHooks implements ExtensionInterface
             if ($type === PromoCampaignEntity::TYPE_PERCENT) {
                 $pct = (float) ($promo->discount_percent ?? 0);
                 if ($pct <= 0 || $pct > 100) {
+                    continue;
+                }
+            } elseif ($type === PromoCampaignEntity::TYPE_QUANTITY) {
+                if ($this->eligibility->quantityPercentForPurchase($purchase, $cart, $promo) <= 0) {
                     continue;
                 }
             } elseif ($type === PromoCampaignEntity::TYPE_FIXED) {
@@ -269,18 +297,36 @@ class PromoCartHooks implements ExtensionInterface
                         if (!$this->eligibility->campaignVisibleOnStorefront($campaign)) {
                             continue;
                         }
-                        if (!$this->eligibility->campaignDatesOk($campaign)) {
+                        if (!$this->eligibility->campaignDatesOk($campaign)
+                            || !$this->eligibility->campaignMatchesCart($cart, $campaign)
+                            || !$this->eligibility->purchaseMatchesCampaign($purchase, $promoId)
+                            || (isset($sess['product_id']) && (int) $sess['product_id'] !== (int) $purchase->product_id)) {
                             continue;
                         }
                         $giftId = (int) $row->gift_id;
                         if (!isset($giftProductCache[$giftId])) {
                             $product = $this->productsEntity->findOne(['id' => $giftId]);
-                            $giftProductCache[$giftId] = $this->productsHelper->attachImages([$product->id => $product])[$product->id];
+                            if (!is_object($product) || empty($product->id)) {
+                                continue;
+                            }
+                            $giftProductCache[$giftId] = $this->productsHelper->attachImages([$product->id => $product])[$product->id] ?? $product;
                         }
                         $product = $giftProductCache[$giftId];
 
-                        $giftVariantCache[$giftId] ??= $this->variantsEntity->findOne(['product_id' => $product->id]);
-                        $variant = clone $giftVariantCache[$giftId];
+                        // Повага до вибраного варіанта подарунка, але лише якщо він справді належить подарунковому товару.
+                        $selectedVariantId = (int) ($sess['gift_variant_id'] ?? 0);
+                        $cacheKey = $giftId . ':' . $selectedVariantId;
+                        if (!array_key_exists($cacheKey, $giftVariantCache)) {
+                            $chosenVariant = $selectedVariantId > 0 ? $this->variantsEntity->get($selectedVariantId) : null;
+                            if (empty($chosenVariant->id) || (int) $chosenVariant->product_id !== $giftId) {
+                                $chosenVariant = $this->variantsEntity->findOne(['product_id' => $product->id]);
+                            }
+                            $giftVariantCache[$cacheKey] = $chosenVariant;
+                        }
+                        if (empty($giftVariantCache[$cacheKey]->id)) {
+                            continue;
+                        }
+                        $variant = clone $giftVariantCache[$cacheKey];
                         $variant->gift_price = $variant->price;
                         $variant->price = 0;
                         $variant->gift_product_id = $purchase->product->id;

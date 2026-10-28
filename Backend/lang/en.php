@@ -83,3 +83,15 @@ $lang['sviat_promo__feature_select']  = 'Select property';
 $lang['sviat_promo__exclude_no_image'] = 'Exclude products without images';
 $lang['sviat_promo__exclude_no_image_hint'] = 'When enabled, products without a main image are excluded from the campaign — in the catalog, cart, and feeds.';
 $lang['sviat_promo__exclude_no_image_alert'] = 'This product has no image and cannot be added while the "no-image" filter is enabled.';
+$lang['sviat_promo__type_quantity'] = 'Quantity discount';
+$lang['sviat_promo__quantity_tiers'] = 'Discount tiers';
+$lang['sviat_promo__quantity_hint'] = 'Counts the units of every cart product within the promotion scope. The highest reached tier applies, and its discount is given on each of those products.';
+$lang['sviat_promo__quantity_from'] = 'from';
+$lang['sviat_promo__quantity_unit'] = 'pcs';
+$lang['sviat_promo__quantity_percent'] = 'Discount, %';
+$lang['sviat_promo__quantity_add'] = 'Add tier';
+$lang['sviat_promo__quantity_remove'] = 'Remove tier';
+$lang['sviat_promo__quantity_invalid_tiers'] = 'Tiers must be unique, from 2 pcs, with a discount from 0.01 to 100%.';
+$lang['sviat_promo__round_label'] = 'Round the discounted price to a whole number';
+$lang['sviat_promo__round_hint'] = 'The unit price after the discount is rounded to a whole number in the main currency: 912.48 → 912, 912.50 → 913. The line total is the rounded price × quantity. The price never ends up above the regular one.';
+

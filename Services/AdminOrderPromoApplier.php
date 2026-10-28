@@ -149,7 +149,7 @@ class AdminOrderPromoApplier implements ExtensionInterface
             }
             $discountType  = 'percent';
             $discountValue = $pct;
-            $newPrice      = round($undiscounted * (100 - $pct) / 100, $this->currencyPrecision);
+            $newPrice      = PromoPriceRounding::price($campaign, $undiscounted * (100 - $pct) / 100, $this->currencyPrecision, $undiscounted);
         } elseif ($type === PromoCampaignEntity::TYPE_FIXED) {
             $fixed = (float) ($campaign->discount_fixed ?? 0);
             if ($fixed <= 0 || $undiscounted <= $fixed) {
@@ -157,9 +157,16 @@ class AdminOrderPromoApplier implements ExtensionInterface
             }
             $discountType  = 'absolute';
             $discountValue = $fixed;
-            $newPrice      = round($undiscounted - $fixed, $this->currencyPrecision);
+            $newPrice      = PromoPriceRounding::price($campaign, $undiscounted - $fixed, $this->currencyPrecision, $undiscounted);
         } else {
             return;
+        }
+
+        // Коли кінцеву ціну округлено, зберігаємо фактичну різницю як absolute:
+        // інакше перерахування відсотка ядром поверне неокруглену ціну.
+        if (PromoPriceRounding::enabled($campaign)) {
+            $discountType = 'absolute';
+            $discountValue = round(max(0.0, $undiscounted - $newPrice), $this->currencyPrecision);
         }
 
         /** @var DiscountsEntity $discountsEntity */

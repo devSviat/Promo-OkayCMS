@@ -37,3 +37,8 @@ $lang['sviat_promo_page__upcoming_badge']           = 'Анонс';
 $lang['sviat_promo_page__starts']                   = 'Початок:';
 $lang['sviat_promo_page__time_to_start']            = 'До початку';
 $lang['sviat_promo_page__upcoming_products_hidden'] = 'Знижки на товари будуть доступні після початку акції.';
+
+$lang['sviat_promo__discount_included'] = 'Уже враховано в ціні товарів';
+
+$lang['sviat_promo__price_before'] = 'Ціна до акції';
+$lang['sviat_promo__unit'] = 'шт.';

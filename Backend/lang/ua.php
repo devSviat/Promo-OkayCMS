@@ -83,3 +83,15 @@ $lang['sviat_promo__feature_select']  = 'Оберіть властивість';
 $lang['sviat_promo__exclude_no_image'] = 'Виключати товари без фото';
 $lang['sviat_promo__exclude_no_image_hint'] = 'Коли увімкнено: товари без головного зображення не входять в акцію — ані в каталог, ані в кошик, ані у фіди.';
 $lang['sviat_promo__exclude_no_image_alert'] = 'Цей товар не має фото. Його не можна додати до акції з увімкненим фільтром «без фото».';
+$lang['sviat_promo__type_quantity'] = 'Знижка за кількістю';
+$lang['sviat_promo__quantity_tiers'] = 'Пороги знижки';
+$lang['sviat_promo__quantity_hint'] = 'Рахуються одиниці всіх товарів з області дії акції, які є в кошику. Діє найбільший досягнутий поріг, і його знижка застосовується до кожного з цих товарів.';
+$lang['sviat_promo__quantity_from'] = 'від';
+$lang['sviat_promo__quantity_unit'] = 'шт.';
+$lang['sviat_promo__quantity_percent'] = 'Знижка, %';
+$lang['sviat_promo__quantity_add'] = 'Додати поріг';
+$lang['sviat_promo__quantity_remove'] = 'Видалити поріг';
+$lang['sviat_promo__quantity_invalid_tiers'] = 'Пороги мають бути різними, від 2 шт., знижка — від 0,01 до 100 %.';
+$lang['sviat_promo__round_label'] = 'Округлювати ціну зі знижкою до цілого';
+$lang['sviat_promo__round_hint'] = 'Ціна одиниці товару після знижки округлюється до цілого в основній валюті: 912,48 → 912, 912,50 → 913. Сума позиції — округлена ціна × кількість. Ціна не стає вищою за звичайну.';
+

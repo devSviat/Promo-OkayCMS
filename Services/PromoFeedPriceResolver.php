@@ -151,7 +151,7 @@ class PromoFeedPriceResolver
         /** @var PromoCampaignEntity $campaignsEntity */
         $campaignsEntity = $this->entityFactory->get(PromoCampaignEntity::class);
         // Без admin_list: у сутності додається sp.visible = 1 — «вимкнені» кампанії не потрапляють у вибірку взагалі.
-        $all = $campaignsEntity->find([]);
+        $all = $campaignsEntity->noLimit()->find([]);
 
         foreach ($all as $c) {
             if ((int) ($c->visible ?? 0) !== 1) {
@@ -163,7 +163,8 @@ class PromoFeedPriceResolver
             if (!$this->eligibility->campaignDatesOk($c)) {
                 continue;
             }
-            if ((int) ($c->feed_enabled ?? 0) !== 1) {
+            if ((int) ($c->feed_enabled ?? 0) !== 1 || (float) ($c->min_order_amount ?? 0) > 0) {
+                // У фіді немає кошика, тому знижка за мінімальною сумою не є гарантованою ціною.
                 continue;
             }
             $this->activeCampaigns[(int) $c->id] = $c;
@@ -178,7 +179,7 @@ class PromoFeedPriceResolver
         // Завантажуємо скопи кампаній (для швидкої перевірки без SQL у циклі фіда)
         /** @var PromoScopeEntity $scopeEntity */
         $scopeEntity = $this->entityFactory->get(PromoScopeEntity::class);
-        $scopes = $scopeEntity->find(['promo_id' => $promoIds]);
+        $scopes = $scopeEntity->noLimit()->find(['promo_id' => $promoIds]);
 
         $featureValueIds = [];
         foreach ($scopes as $row) {
@@ -341,7 +342,7 @@ class PromoFeedPriceResolver
             if ($pct <= 0 || $pct > 100) {
                 return null;
             }
-            return round($basePrice * (100 - $pct) / 100, $this->currencyPrecision);
+            return PromoPriceRounding::price($campaign, $basePrice * (100 - $pct) / 100, $this->currencyPrecision, $basePrice);
         }
 
         if ($type === PromoCampaignEntity::TYPE_FIXED) {
@@ -349,7 +350,7 @@ class PromoFeedPriceResolver
             if ($fixed <= 0 || $basePrice <= $fixed) {
                 return null;
             }
-            return round($basePrice - $fixed, $this->currencyPrecision);
+            return PromoPriceRounding::price($campaign, $basePrice - $fixed, $this->currencyPrecision, $basePrice);
         }
 
         return null;
