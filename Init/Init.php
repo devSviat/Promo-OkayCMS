@@ -97,7 +97,6 @@ class Init extends AbstractInit
             new EntityField('feed_enabled')->setTypeTinyInt(1, true)->setDefault(0)->setIndex(),
             new EntityField('exclude_no_image')->setTypeTinyInt(1, true)->setDefault(0),
             new EntityField('visible')->setTypeTinyInt(1, true)->setDefault(0)->setIndex(),
-            new EntityField('priority')->setTypeInt(11, true)->setDefault(0)->setIndex(),
             new EntityField('position')->setTypeInt(11, true)->setDefault(0)->setIndex(),
             new EntityField('last_modify')->setTypeTimestamp(),
         ]);
@@ -396,6 +395,11 @@ class Init extends AbstractInit
         if (!$this->tableExists(PromoQuantityTierEntity::getTable())) {
             $this->migrateEntityTable(PromoQuantityTierEntity::class, self::quantityTierFields());
         }
+        // Поля в формі не було ніколи, тож там скрізь 0, а порядок акцій задає position.
+        // На чистій інсталяції колонки вже немає; DROP COLUMN IF EXISTS не підтримує MySQL.
+        if ($this->columnExists(PromoCampaignEntity::getTable(), 'priority')) {
+            $this->runStatement('ALTER TABLE `' . PromoCampaignEntity::getTable() . '` DROP COLUMN `priority`');
+        }
     }
 
     /** @return EntityField[] */
@@ -421,9 +425,23 @@ class Init extends AbstractInit
 
     private function tableExists(string $table): bool
     {
+        return $this->runStatement("SELECT 1 FROM `{$table}` LIMIT 1");
+    }
+
+    private function columnExists(string $table, string $column): bool
+    {
+        $database = ServiceLocator::getInstance()->getService(Database::class);
+        if (!$this->runStatement("SHOW COLUMNS FROM `{$table}` LIKE '{$column}'")) {
+            return false;
+        }
+
+        return !empty($database->result());
+    }
+
+    private function runStatement(string $statement): bool
+    {
         $locator = ServiceLocator::getInstance();
-        $query = $locator->getService(QueryFactory::class)->newSqlQuery()
-            ->setStatement("SELECT 1 FROM `{$table}` LIMIT 1");
+        $query = $locator->getService(QueryFactory::class)->newSqlQuery()->setStatement($statement);
 
         return $locator->getService(Database::class)->query($query) === true;
     }

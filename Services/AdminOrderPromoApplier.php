@@ -6,6 +6,7 @@ use Okay\Core\EntityFactory;
 use Okay\Core\Modules\Extender\ExtensionInterface;
 use Okay\Entities\CurrenciesEntity;
 use Okay\Entities\DiscountsEntity;
+use Okay\Entities\OrdersEntity;
 use Okay\Entities\ProductsEntity;
 use Okay\Entities\PurchasesEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
@@ -92,50 +93,64 @@ class AdminOrderPromoApplier implements ExtensionInterface
             return $return;
         }
 
+        $applied = false;
         try {
             foreach ($this->newPurchases as $info) {
-                $this->applyPromoForPurchase($info);
+                $applied = $this->applyPromoForPurchase($info) || $applied;
             }
         } finally {
             $this->newPurchases = [];
         }
 
+        // Контролер уже перерахував суму до цього хука, тож без цього замовлення
+        // показувало б ціну без знижки до наступного збереження.
+        if ($applied && !empty($order->id)) {
+            /** @var OrdersEntity $ordersEntity */
+            $ordersEntity = $this->entityFactory->get(OrdersEntity::class);
+            $ordersEntity->updateTotalPrice((int) $order->id);
+        }
+
         return $return;
     }
 
-    private function applyPromoForPurchase(array $info): void
+    private function applyPromoForPurchase(array $info): bool
     {
         $productId = $info['product_id'];
         $purchaseId = $info['purchase_id'];
         if ($productId < 1 || $purchaseId < 1) {
-            return;
+            return false;
         }
 
         /** @var ProductsEntity $productsEntity */
         $productsEntity = $this->entityFactory->get(ProductsEntity::class);
         $product = $productsEntity->get($productId);
         if ($product === null || empty($product->id)) {
-            return;
+            return false;
         }
 
         $promoIds = $this->eligibility->promoIdsForProduct($product);
         if ($promoIds === []) {
-            return;
+            return false;
         }
 
-        $campaigns = $this->eligibility->getActiveCampaigns(
-            $promoIds,
-            [PromoCampaignEntity::TYPE_PERCENT, PromoCampaignEntity::TYPE_FIXED]
-        );
+        // Мінімальну суму тут не перевірити: замовлення ще редагують, і його сума
+        // не остаточна. Тому, як у картці товару й фідах, такі акції пропускаємо.
+        $campaigns = array_values(array_filter(
+            $this->eligibility->getActiveCampaigns(
+                $promoIds,
+                [PromoCampaignEntity::TYPE_PERCENT, PromoCampaignEntity::TYPE_FIXED]
+            ),
+            static fn(object $campaign): bool => (float) ($campaign->min_order_amount ?? 0) <= 0
+        ));
         if ($campaigns === []) {
-            return;
+            return false;
         }
         $campaign = $campaigns[0]; // sorted by position ASC, id ASC
 
         $type = strtolower(trim((string) ($campaign->promo_type ?? '')));
         $undiscounted = (float) $info['undiscounted_price'];
         if ($undiscounted <= 0) {
-            return;
+            return false;
         }
 
         $discountValue = null;
@@ -145,7 +160,7 @@ class AdminOrderPromoApplier implements ExtensionInterface
         if ($type === PromoCampaignEntity::TYPE_PERCENT) {
             $pct = (float) ($campaign->discount_percent ?? 0);
             if ($pct <= 0 || $pct > 100) {
-                return;
+                return false;
             }
             $discountType  = 'percent';
             $discountValue = $pct;
@@ -153,13 +168,13 @@ class AdminOrderPromoApplier implements ExtensionInterface
         } elseif ($type === PromoCampaignEntity::TYPE_FIXED) {
             $fixed = (float) ($campaign->discount_fixed ?? 0);
             if ($fixed <= 0 || $undiscounted <= $fixed) {
-                return;
+                return false;
             }
             $discountType  = 'absolute';
             $discountValue = $fixed;
             $newPrice      = PromoPriceRounding::price($campaign, $undiscounted - $fixed, $this->currencyPrecision, $undiscounted);
         } else {
-            return;
+            return false;
         }
 
         // Коли кінцеву ціну округлено, зберігаємо фактичну різницю як absolute:
@@ -185,5 +200,7 @@ class AdminOrderPromoApplier implements ExtensionInterface
         /** @var PurchasesEntity $purchasesEntity */
         $purchasesEntity = $this->entityFactory->get(PurchasesEntity::class);
         $purchasesEntity->update($purchaseId, ['price' => $newPrice]);
+
+        return true;
     }
 }

@@ -64,7 +64,6 @@ class PromoCampaignEntity extends Entity
         'feed_enabled',
         'last_modify',
         'promo_type',
-        'priority',
         'position',
         'min_order_amount',
         'discount_percent',

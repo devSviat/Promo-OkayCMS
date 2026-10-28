@@ -23,7 +23,6 @@ $lang['sviat_promo__type_fixed'] = 'Fixed discount';
 $lang['sviat_promo__type_gift'] = 'Gift';
 $lang['sviat_promo__type_bundle'] = '1+1=3 (bundle)';
 $lang['sviat_promo__type_free_shipping'] = 'Free shipping';
-$lang['sviat_promo__priority'] = 'Priority (higher applies first)';
 $lang['sviat_promo__min_order'] = 'Minimum order amount';
 $lang['sviat_promo__discount_percent'] = 'Discount, %';
 $lang['sviat_promo__discount_fixed'] = 'Discount, amount';

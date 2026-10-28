@@ -222,7 +222,6 @@ class CampaignEditAdmin extends IndexAdmin
                     'exclude_no_image'     => 0,
                     'has_date_range'       => 0,
                     'promo_type'           => PromoCampaignEntity::TYPE_PERCENT,
-                    'priority'             => 0,
                     'min_order_amount'     => 0,
                     'discount_percent'     => null,
                     'discount_fixed'       => null,

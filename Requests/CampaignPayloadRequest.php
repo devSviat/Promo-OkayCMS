@@ -64,7 +64,6 @@ class CampaignPayloadRequest
         ];
         $promo->promo_type = in_array($type, $allowed, true) ? $type : PromoCampaignEntity::TYPE_GIFT;
 
-        $promo->priority = (int) $this->request->post('priority', 'integer');
         $promo->min_order_amount = (float) str_replace(',', '.', (string) $this->request->post('min_order_amount', 'string'));
 
         // У старих акціях перемикач вимкнено. Параметр діє лише для цінових акцій.

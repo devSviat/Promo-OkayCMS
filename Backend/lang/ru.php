@@ -23,7 +23,6 @@ $lang['sviat_promo__type_fixed'] = 'Фиксированная скидка';
 $lang['sviat_promo__type_gift'] = 'Подарок';
 $lang['sviat_promo__type_bundle'] = '1+1=3 (bundle)';
 $lang['sviat_promo__type_free_shipping'] = 'Бесплатная доставка';
-$lang['sviat_promo__priority'] = 'Приоритет (больше — применяется раньше)';
 $lang['sviat_promo__min_order'] = 'Минимальная сумма заказа';
 $lang['sviat_promo__discount_percent'] = 'Скидка, %';
 $lang['sviat_promo__discount_fixed'] = 'Скидка, сумма';

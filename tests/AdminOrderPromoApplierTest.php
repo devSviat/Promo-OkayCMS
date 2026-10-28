@@ -4,6 +4,7 @@ namespace Modules\Sviat\Promo;
 
 use Okay\Entities\CurrenciesEntity;
 use Okay\Entities\DiscountsEntity;
+use Okay\Entities\OrdersEntity;
 use Okay\Entities\ProductsEntity;
 use Okay\Entities\PurchasesEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
@@ -14,18 +15,20 @@ require_once __DIR__ . '/PromoTestCase.php';
 
 class AdminOrderPromoApplierTest extends PromoTestCase
 {
-    private function makeApplier(int $cents = 0, ?PromotionEligibility $eligibility = null, ?ProductsEntity $products = null, ?DiscountsEntity $discounts = null, ?PurchasesEntity $purchases = null): AdminOrderPromoApplier
+    private function makeApplier(int $cents = 0, ?PromotionEligibility $eligibility = null, ?ProductsEntity $products = null, ?DiscountsEntity $discounts = null, ?PurchasesEntity $purchases = null, ?OrdersEntity $orders = null): AdminOrderPromoApplier
     {
         $eligibility = $eligibility ?? $this->createStub(PromotionEligibility::class);
         $products    = $products    ?? $this->createStub(ProductsEntity::class);
         $discounts   = $discounts   ?? $this->createStub(DiscountsEntity::class);
         $purchases   = $purchases   ?? $this->createStub(PurchasesEntity::class);
+        $orders      = $orders      ?? $this->createStub(OrdersEntity::class);
 
         $factory = $this->mockEntityFactory([
             CurrenciesEntity::class => $this->mockCurrenciesEntity($cents),
             ProductsEntity::class   => $products,
             DiscountsEntity::class  => $discounts,
             PurchasesEntity::class  => $purchases,
+            OrdersEntity::class     => $orders,
         ]);
 
         return new AdminOrderPromoApplier($factory, $eligibility);
@@ -193,5 +196,61 @@ class AdminOrderPromoApplierTest extends PromoTestCase
             $ref = self::accessible(new \ReflectionProperty(AdminOrderPromoApplier::class, 'newPurchases'));
             self::assertSame([], $ref->getValue($applier), 'state must be cleared even on error');
         }
+    }
+
+    /** Контролер перерахував суму до хука; без повторного перерахунку замовлення показувало б ціну без знижки. */
+    public function testOrderTotalIsRecalculatedAfterDiscount(): void
+    {
+        $orders = $this->createMock(OrdersEntity::class);
+        $orders->expects(self::once())->method('updateTotalPrice')->with(17106);
+
+        $this->applierWithCampaigns([$this->percentCampaign(7, 15, 0)], null, $orders)
+            ->applyPromosToNewPurchases(null, (object) ['id' => 17106]);
+    }
+
+    /** Суму замовлення в адмінці ще редагують, тож мінімум не перевірити — така акція пропускається. */
+    public function testMinOrderCampaignIsSkippedForNextOne(): void
+    {
+        $purchases = $this->createMock(PurchasesEntity::class);
+        $purchases->expects(self::once())->method('update')->with(101, ['price' => 243.0]); // 270 * 0.9
+
+        $this->applierWithCampaigns([$this->percentCampaign(7, 15, 1000), $this->percentCampaign(8, 10, 0)], $purchases)
+            ->applyPromosToNewPurchases(null, (object) ['id' => 17106]);
+    }
+
+    public function testNothingIsAppliedWhenOnlyMinOrderCampaignMatches(): void
+    {
+        $purchases = $this->createMock(PurchasesEntity::class);
+        $purchases->expects(self::never())->method('update');
+        $orders = $this->createMock(OrdersEntity::class);
+        $orders->expects(self::never())->method('updateTotalPrice');
+
+        $this->applierWithCampaigns([$this->percentCampaign(7, 15, 1000)], $purchases, $orders)
+            ->applyPromosToNewPurchases(null, (object) ['id' => 17106]);
+    }
+
+    private function percentCampaign(int $id, float $percent, float $minOrder): \stdClass
+    {
+        return $this->buildPromo([
+            'id' => $id,
+            'promo_type' => PromoCampaignEntity::TYPE_PERCENT,
+            'discount_percent' => $percent,
+            'min_order_amount' => $minOrder,
+        ]);
+    }
+
+    /** @param \stdClass[] $campaigns активні кампанії в порядку position */
+    private function applierWithCampaigns(array $campaigns, ?PurchasesEntity $purchases = null, ?OrdersEntity $orders = null): AdminOrderPromoApplier
+    {
+        $products = $this->createStub(ProductsEntity::class);
+        $products->method('get')->willReturn((object) ['id' => 5, 'brand_id' => 0, 'main_image_id' => 11, 'main_category_id' => 0]);
+        $eligibility = $this->createStub(PromotionEligibility::class);
+        $eligibility->method('promoIdsForProduct')->willReturn(array_map(static fn($c) => $c->id, $campaigns));
+        $eligibility->method('getActiveCampaigns')->willReturn($campaigns);
+
+        $applier = $this->makeApplier(0, $eligibility, $products, null, $purchases, $orders);
+        $applier->rememberAddedPurchase(101, (object) ['product_id' => 5, 'variant_id' => 50, 'amount' => 1, 'undiscounted_price' => 270.0]);
+
+        return $applier;
     }
 }
