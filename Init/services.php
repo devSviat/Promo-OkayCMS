@@ -20,6 +20,7 @@ use Okay\Helpers\DiscountsHelper;
 use Okay\Modules\Sviat\Promo\Services\CartDiscountPipeline;
 use Okay\Modules\Sviat\Promo\Services\PromoFeedPriceResolver;
 use Okay\Modules\Sviat\Promo\Services\PromoProductDisplayService;
+use Okay\Modules\Sviat\Promo\Services\PromoDiscountForDb;
 use Okay\Modules\Sviat\Promo\Services\PurchasePriceRounder;
 use Okay\Modules\Sviat\Promo\Services\AdminOrderPromoApplier;
 use Okay\Modules\Sviat\Promo\Services\AdminPurchasePriceRounder;
@@ -68,6 +69,10 @@ return [
             new SR(LoggerInterface::class),
             new SR(EntityFactory::class),
         ],
+    ],
+    PromoDiscountForDb::class => [
+        'class'     => PromoDiscountForDb::class,
+        'arguments' => [],
     ],
     PurchasePriceRounder::class => [
         'class'     => PurchasePriceRounder::class,
