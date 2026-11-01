@@ -41,6 +41,7 @@ use Okay\Modules\Sviat\Promo\Services\PromoBoundaryWatcher;
 use Okay\Admin\Helpers\BackendOrdersHelper;
 use Okay\Modules\Sviat\Promo\Services\AdminOrderPromoApplier;
 use Okay\Modules\Sviat\Promo\Services\AdminPurchasePriceRounder;
+use Okay\Modules\Sviat\Promo\Services\PromoDiscountForDb;
 use Okay\Modules\Sviat\Promo\Services\PurchasePriceRounder;
 
 class Init extends AbstractInit
@@ -235,6 +236,11 @@ class Init extends AbstractInit
         $this->registerChainExtension(
             ['class' => CartHelper::class, 'method' => 'prepareCart'],
             ['class' => PromoCartHooks::class, 'method' => 'getPromoGiftPurchases']
+        );
+
+        $this->registerChainExtension(
+            ['class' => DiscountsHelper::class, 'method' => 'prepareForDB'],
+            ['class' => PromoDiscountForDb::class, 'method' => 'keepActualAmount']
         );
 
         $this->registerChainExtension(
