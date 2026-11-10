@@ -79,6 +79,20 @@ class PromoFeedPriceResolverTest extends PromoTestCase
         self::assertMatchesRegularExpression('#^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$#', $range);
     }
 
+    /**
+     * Без дати початку старт — початок поточної доби (UTC), а не поточна секунда: sale_price_effective_date
+     * інакше мінявся б на кожній збірці, і модуль Merchant API надсилав би такі товари щоразу заново.
+     */
+    public function testRangeWithoutStartIsStableWithinTheDay(): void
+    {
+        $resolver = $this->makeResolver();
+        $range = $resolver->buildSalePriceDateRange(null, '2099-12-31 23:59:00');
+
+        self::assertSame(gmdate('Y-m-d') . 'T00:00:00Z/2099-12-31', substr((string) $range, 0, 31));
+        sleep(1);
+        self::assertSame($range, $resolver->buildSalePriceDateRange('', '2099-12-31 23:59:00'));
+    }
+
     public function testBuildSalePriceDateRangeReturnsNullOnInvalidEnd(): void
     {
         $resolver = $this->makeResolver();
