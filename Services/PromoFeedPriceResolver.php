@@ -380,7 +380,9 @@ class PromoFeedPriceResolver
                 return null;
             }
         } else {
-            $startTs = time();
+            // Початок доби (UTC), а не поточна секунда: інакше атрибут змінювався б на кожній збірці фіда,
+            // і Merchant API отримував би ті самі товари заново щоразу, а Google радить не частіше двох разів на добу.
+            $startTs = intdiv(time(), 86400) * 86400;
         }
 
         $startStr = gmdate('Y-m-d\TH:i:s\Z', $startTs);
