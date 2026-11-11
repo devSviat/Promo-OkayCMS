@@ -90,9 +90,12 @@ class CampaignRepository
      * Спочатку видаляє старі, потім записує нові.
      *
      * @param array<string, int[]> $feedIds Наприклад: ['feeds' => [1], 'gm' => [2, 3]]
+     * @param list<string> $hiddenTypes цілі без перемикача у формі (модуля немає): їхні прив'язки лишаються як були
      */
-    public function saveFeedLinks(int $promoId, int $feedEnabled, array $feedIds): void
+    public function saveFeedLinks(int $promoId, int $feedEnabled, array $feedIds, array $hiddenTypes = []): void
     {
+        $kept = array_intersect_key($this->feedLinks->getLinkedFeedIds($promoId), array_flip($hiddenTypes));
+        $feedIds = $kept + array_diff_key($feedIds, $kept);
         $this->feedLinks->deleteByPromoId($promoId);
 
         if (!$feedEnabled) {

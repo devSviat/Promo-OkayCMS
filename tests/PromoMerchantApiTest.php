@@ -59,6 +59,31 @@ class PromoMerchantApiTest extends PromoTestCase
     }
 
     /**
+     * Ціль, модуля якої зараз немає (вимкнений GoogleMerchant, MerchantApi на стоку), не має перемикача у формі.
+     * Збереження акції не мусить стирати її прив'язки: інакше після повернення модуля акція зникла б із фіда.
+     */
+    public function testLinksOfHiddenTargetsSurviveSave(): void
+    {
+        $added = [];
+        $links = $this->createStub(PromoFeedLinkEntity::class);
+        $links->method('getLinkedFeedIds')->willReturn(['merchant_api' => [1], 'gm' => [2, 3], 'feeds' => [4]]);
+        $links->method('add')->willReturnCallback(static function ($row) use (&$added) {
+            $added[] = $row['feed_type'] . ':' . $row['feed_id'];
+
+            return 1;
+        });
+        $entityFactory = $this->createStub(EntityFactory::class);
+        $entityFactory->method('get')->willReturnCallback(fn($class) => $class === PromoFeedLinkEntity::class ? $links : $this->createStub($class));
+
+        new CampaignRepository($entityFactory, $this->createStub(Config::class), $this->createStub(Image::class))
+            ->saveFeedLinks(9, 1, ['feeds' => [5]], hiddenTypes: ['merchant_api', 'gm']);
+
+        sort($added);
+        $this->assertSame(['feeds:5', 'gm:2', 'gm:3', 'merchant_api:1'], $added);
+        $this->assertSame(['merchant_api'], PromoFeedLinkEntity::hiddenTypes(feeds: true, gm: true, merchantApi: false));
+    }
+
+    /**
      * Колонка feed_type — ENUM: значення поза списком нестрогий MariaDB мовчки записав би порожнім рядком.
      * Встановлення й оновлення мають брати той самий список, і в ньому має бути merchant_api.
      */

@@ -12,6 +12,7 @@ use Okay\Entities\ProductsEntity;
 use Okay\Entities\FeaturesEntity;
 use Okay\Entities\FeaturesValuesEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
+use Okay\Modules\Sviat\Promo\Entities\PromoFeedLinkEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoRewardLineEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoScopeEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoQuantityTierEntity;
@@ -195,7 +196,12 @@ class CampaignEditAdmin extends IndexAdmin
                 $campaignRepository->saveFeedLinks(
                     (int) $promo->id,
                     (int) ($promo->feed_enabled ?? 0),
-                    $payload->postFeedIds()
+                    $payload->postFeedIds(),
+                    PromoFeedLinkEntity::hiddenTypes(
+                        feeds: class_exists(\Okay\Modules\OkayCMS\Feeds\Entities\FeedsEntity::class),
+                        gm: class_exists(\Okay\Modules\OkayCMS\GoogleMerchant\Entities\GoogleMerchantFeedsEntity::class),
+                        merchantApi: class_exists(\Okay\Modules\Sviat\MerchantApi\Services\CatalogItemBuilder::class),
+                    ),
                 );
 
                 $promoObjects = $scopeRows->find(['promo_id' => $promo->id]);
