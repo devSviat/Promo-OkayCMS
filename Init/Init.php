@@ -2,8 +2,10 @@
 
 namespace Okay\Modules\Sviat\Promo\Init;
 
+use Okay\Modules\Sviat\MerchantApi\Services\CatalogItemBuilder;
 use Okay\Core\Cart;
 use Okay\Core\Database;
+use Okay\Core\EntityFactory;
 use Okay\Core\QueryFactory;
 use Okay\Core\ServiceLocator;
 use Okay\Core\Classes\Purchase;
@@ -120,10 +122,7 @@ class Init extends AbstractInit
 
         $this->migrateEntityTable(PromoFeedLinkEntity::class, [
             new EntityField('promo_id')->setTypeInt(11)->setIndex(),
-            new EntityField('feed_type')->setTypeEnum([
-                PromoFeedLinkEntity::TYPE_FEEDS,
-                PromoFeedLinkEntity::TYPE_GM,
-            ])->setDefault(PromoFeedLinkEntity::TYPE_FEEDS)->setIndex(),
+            new EntityField('feed_type')->setTypeEnum(PromoFeedLinkEntity::TYPES)->setDefault(PromoFeedLinkEntity::TYPE_FEEDS)->setIndex(),
             new EntityField('feed_id')->setTypeInt(11)->setIndex(),
         ]);
 
@@ -370,6 +369,24 @@ class Init extends AbstractInit
                 );
             }
         }
+
+        $this->registerMerchantApiExtensions();
+    }
+
+    /** Sviat/MerchantApi від 2.0 збирає записи сам — без нього підключення просто немає (сток). */
+    private function registerMerchantApiExtensions(): void
+    {
+        if (!class_exists(CatalogItemBuilder::class)) {
+            return;
+        }
+        $this->registerChainExtension(
+            ['class' => CatalogItemBuilder::class, 'method' => 'getQuery'],
+            ['class' => PromoGoogleMerchantExtender::class, 'method' => 'preloadForMerchantApi']
+        );
+        $this->registerChainExtension(
+            ['class' => CatalogItemBuilder::class, 'method' => 'getItem'],
+            ['class' => PromoGoogleMerchantExtender::class, 'method' => 'applyPromoToItem']
+        );
     }
 
     /**
@@ -502,5 +519,29 @@ class Init extends AbstractInit
             PromoCampaignEntity::class,
             new EntityField('exclude_no_image')->setTypeTinyInt(1, true)->setDefault(0)
         );
+    }
+
+    /**
+     * 2.0: акції, що діяли у фідах GoogleMerchant, діють і в Google через Sviat/MerchantApi. Ідемпотентно:
+     * update_* виконуються й на чистій інсталяції.
+     */
+    public function update_2_0_0(): void
+    {
+        // Без індексу: колонка лише міняє список значень, індекс у неї вже є.
+        $this->migrateEntityField(
+            PromoFeedLinkEntity::class,
+            new EntityField('feed_type')->setTypeEnum(PromoFeedLinkEntity::TYPES)->setDefault(PromoFeedLinkEntity::TYPE_FEEDS)
+        );
+
+        $locator = ServiceLocator::getInstance();
+        $links = $locator->getService(EntityFactory::class)->get(PromoFeedLinkEntity::class);
+        $rows = array_map(static fn(object $row) => (array) $row, $links->noLimit()->find());
+        foreach (PromoFeedLinkEntity::promoIdsMissingMerchantApi($rows) as $promoId) {
+            $links->add([
+                'promo_id' => $promoId,
+                'feed_type' => PromoFeedLinkEntity::TYPE_MERCHANT_API,
+                'feed_id' => PromoFeedLinkEntity::MERCHANT_API_FEED_ID,
+            ]);
+        }
     }
 }

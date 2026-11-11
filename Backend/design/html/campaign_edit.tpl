@@ -862,7 +862,7 @@
                 </div>
 
                 <div class="toggle_body_wrap fn_card fn_promo_feeds_body{if !empty($promo->feed_enabled)} on{/if}"{if empty($promo->feed_enabled)} style="display:none"{/if}>
-                    {if empty($available_feeds.feeds) && empty($available_feeds.gm)}
+                    {if empty($available_feeds.feeds) && empty($available_feeds.gm) && empty($available_feeds.merchant_api)}
                         <p class="text_grey text_13 mb-0">{$btr->sviat_promo__feeds_no_feeds|escape}</p>
                     {else}
                         <div class="permission_block">
@@ -910,6 +910,26 @@
                                             </div>
                                         </div>
                                     {/foreach}
+                                {/if}
+
+                                {* ── Sviat / Google Merchant API (без фідів — одна ціль) ─────── *}
+                                {if !empty($available_feeds.merchant_api)}
+                                    <div class="col-lg-12 mb-1{if !empty($available_feeds.feeds) || !empty($available_feeds.gm)} mt-1{/if}">
+                                        <div class="heading_label">{$btr->sviat_promo__feeds_merchant_api_title|escape}</div>
+                                    </div>
+                                    <div class="col-xl-6 col-lg-6 col-md-12">
+                                        <div class="permission_box permission_box--long">
+                                            <span>{$btr->sviat_promo__feeds_merchant_api_label|escape}</span>
+                                            <label class="switch switch-default">
+                                                <input class="switch-input" type="checkbox"
+                                                    name="feed_ids[merchant_api][]"
+                                                    value="1"
+                                                    {if in_array(1, $linked_feed_ids.merchant_api|default:[])}checked=""{/if} />
+                                                <span class="switch-label"></span>
+                                                <span class="switch-handle"></span>
+                                            </label>
+                                        </div>
+                                    </div>
                                 {/if}
 
                             </div>

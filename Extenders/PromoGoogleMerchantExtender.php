@@ -13,9 +13,9 @@ use Okay\Modules\Sviat\Promo\Services\PromoFeedPriceResolver;
 use Okay\Modules\Sviat\Promo\Services\PromotionEligibility;
 
 /**
- * Акційні ціни кампаній для OkayCMS/GoogleMerchant (legacy).
+ * Акційні ціни кампаній для OkayCMS/GoogleMerchant і Sviat/MerchantApi.
  *
- * GoogleMerchantHelper::getQuery — контекст фіда, preload кампаній і валют; getItem — акційна ціна та sale_price_effective_date.
+ * getQuery — контекст фіда, preload кампаній і валют; getItem — акційна ціна та sale_price_effective_date.
  */
 class PromoGoogleMerchantExtender implements ExtensionInterface
 {
@@ -63,6 +63,23 @@ class PromoGoogleMerchantExtender implements ExtensionInterface
     public function preloadForFeed(Select $sql, $feedId): Select
     {
         $this->resolver->setCurrentFeed(PromoFeedLinkEntity::TYPE_GM, (int) $feedId);
+        $this->resolver->preload();
+
+        /** @var CurrenciesEntity $currenciesEntity */
+        $currenciesEntity    = $this->entityFactory->get(CurrenciesEntity::class);
+        $this->mainCurrency  = $currenciesEntity->getMainCurrency();
+        $this->allCurrencies = $currenciesEntity->mappedBy('id')->find();
+
+        return $sql;
+    }
+
+    /**
+     * Хук Sviat/MerchantApi CatalogItemBuilder::getQuery (chain): той самий запис, що й у фіді GoogleMerchant,
+     * тільки ціль — «Google Merchant API», а не конкретний фід.
+     */
+    public function preloadForMerchantApi(Select $sql): Select
+    {
+        $this->resolver->setCurrentFeed(PromoFeedLinkEntity::TYPE_MERCHANT_API, PromoFeedLinkEntity::MERCHANT_API_FEED_ID);
         $this->resolver->preload();
 
         /** @var CurrenciesEntity $currenciesEntity */

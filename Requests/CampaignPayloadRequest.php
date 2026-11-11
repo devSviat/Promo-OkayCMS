@@ -2,6 +2,7 @@
 
 namespace Okay\Modules\Sviat\Promo\Requests;
 
+use Okay\Modules\Sviat\Promo\Entities\PromoFeedLinkEntity;
 use Okay\Core\Request;
 use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
 
@@ -193,7 +194,7 @@ class CampaignPayloadRequest
             return [];
         }
         $result = [];
-        foreach (['feeds', 'gm'] as $type) {
+        foreach ([PromoFeedLinkEntity::TYPE_FEEDS, PromoFeedLinkEntity::TYPE_GM, PromoFeedLinkEntity::TYPE_MERCHANT_API] as $type) {
             if (!empty($raw[$type]) && is_array($raw[$type])) {
                 $result[$type] = array_values(array_map(intval(...), $raw[$type]));
             }

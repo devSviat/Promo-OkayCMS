@@ -99,7 +99,7 @@ class CampaignRepository
             return;
         }
 
-        foreach ([PromoFeedLinkEntity::TYPE_FEEDS, PromoFeedLinkEntity::TYPE_GM] as $type) {
+        foreach ([PromoFeedLinkEntity::TYPE_FEEDS, PromoFeedLinkEntity::TYPE_GM, PromoFeedLinkEntity::TYPE_MERCHANT_API] as $type) {
             foreach ((array) ($feedIds[$type] ?? []) as $feedId) {
                 $feedId = (int) $feedId;
                 if ($feedId > 0) {
