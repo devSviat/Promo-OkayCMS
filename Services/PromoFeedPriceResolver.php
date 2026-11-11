@@ -78,7 +78,7 @@ class PromoFeedPriceResolver
      * Встановлює контекст поточного фіда перед preload() і findBestCampaign().
      * Викликати один раз для кожної генерації фіда.
      *
-     * @param string $type  PromoFeedLinkEntity::TYPE_FEEDS | TYPE_GM
+     * @param string $type  PromoFeedLinkEntity::TYPE_FEEDS | TYPE_GM | TYPE_MERCHANT_API
      * @param int    $feedId
      */
     public function setCurrentFeed(string $type, int $feedId): void

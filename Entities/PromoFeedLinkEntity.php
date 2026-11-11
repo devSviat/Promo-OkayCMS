@@ -8,6 +8,11 @@ class PromoFeedLinkEntity extends Entity
 {
     public const TYPE_FEEDS = 'feeds';
     public const TYPE_GM    = 'gm';
+    /** Sviat/MerchantApi надсилає товари без фідів — ціль одна, з умовним id: зв'язки з id 0 не зберігаються. */
+    public const TYPE_MERCHANT_API = 'merchant_api';
+    public const MERCHANT_API_FEED_ID = 1;
+    /** Значення ENUM-колонки feed_type: install() і оновлення беруть саме цей список. */
+    public const TYPES = [self::TYPE_FEEDS, self::TYPE_GM, self::TYPE_MERCHANT_API];
 
     protected static $fields = [
         'promo_id',
@@ -56,5 +61,27 @@ class PromoFeedLinkEntity extends Entity
             $result[(int) $row->promo_id][$row->feed_type][] = (int) $row->feed_id;
         }
         return $result;
+    }
+
+    /**
+     * Акції, які діяли у фідах GoogleMerchant, але ще не прив'язані до MerchantApi: при переході на нього вони
+     * мають і далі потрапляти в Google.
+     *
+     * @param iterable<array{promo_id: int|string, feed_type: string, feed_id: int|string}> $rows
+     * @return list<int>
+     */
+    public static function promoIdsMissingMerchantApi(iterable $rows): array
+    {
+        $gm = [];
+        $merchantApi = [];
+        foreach ($rows as $row) {
+            if ($row['feed_type'] === self::TYPE_GM) {
+                $gm[(int) $row['promo_id']] = true;
+            } elseif ($row['feed_type'] === self::TYPE_MERCHANT_API) {
+                $merchantApi[(int) $row['promo_id']] = true;
+            }
+        }
+
+        return array_keys(array_diff_key($gm, $merchantApi));
     }
 }

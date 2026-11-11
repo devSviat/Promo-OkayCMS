@@ -397,14 +397,14 @@ class CampaignEditAdmin extends IndexAdmin
     // -------------------------------------------------------------------------
 
     /**
-     * Завантажує всі доступні фіди з OkayCMS/Feeds та OkayCMS/GoogleMerchant.
-     * Перевіряє class_exists(), щоб контролер працював навіть без одного з модулів.
+     * Доступні цілі акції: фіди OkayCMS/Feeds і OkayCMS/GoogleMerchant та Sviat/MerchantApi.
+     * Перевіряє class_exists(), щоб контролер працював без будь-якого з цих модулів.
      *
-     * @return array{feeds: object[], gm: object[]}
+     * @return array{feeds: object[], gm: object[], merchant_api: bool}
      */
     private function loadAvailableFeeds(EntityFactory $entityFactory): array
     {
-        $result = ['feeds' => [], 'gm' => []];
+        $result = ['feeds' => [], 'gm' => [], 'merchant_api' => class_exists(\Okay\Modules\Sviat\MerchantApi\Services\CatalogItemBuilder::class)];
 
         $feedsEntityClass = \Okay\Modules\OkayCMS\Feeds\Entities\FeedsEntity::class;
         if (class_exists($feedsEntityClass)) {
