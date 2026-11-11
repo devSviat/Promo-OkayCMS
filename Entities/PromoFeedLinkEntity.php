@@ -14,6 +14,17 @@ class PromoFeedLinkEntity extends Entity
     /** Значення ENUM-колонки feed_type: install() і оновлення беруть саме цей список. */
     public const TYPES = [self::TYPE_FEEDS, self::TYPE_GM, self::TYPE_MERCHANT_API];
 
+    /**
+     * Цілі, модулів яких у магазині немає: перемикача у формі акції для них немає, тож збереження
+     * акції не мусить чіпати їхні прив'язки.
+     *
+     * @return list<string>
+     */
+    public static function hiddenTypes(bool $feeds, bool $gm, bool $merchantApi): array
+    {
+        return array_keys(array_filter([self::TYPE_FEEDS => !$feeds, self::TYPE_GM => !$gm, self::TYPE_MERCHANT_API => !$merchantApi]));
+    }
+
     protected static $fields = [
         'promo_id',
         'feed_type',
