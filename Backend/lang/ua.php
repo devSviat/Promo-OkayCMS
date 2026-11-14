@@ -55,7 +55,7 @@ $lang['sviat_promo__image_size_label'] = 'Розмір зображення';
 $lang['sviat_promo__section_gifts'] = 'Подарунки';
 $lang['sviat_promo__hint_gifts'] = 'Лише для типу «Подарунок»: перетягуйте рядки, щоб змінити порядок показу.';
 $lang['sviat_promo__section_seo'] = 'SEO (meta-теги)';
-$lang['sviat_promo__badge_image'] = 'Бадж на фото товару';
+$lang['sviat_promo__badge_image'] = 'Бейдж на фото товару';
 $lang['sviat_promo__badge_image_hint'] = 'Окремо від банера сторінки акції; у списку та на сторінці товару (PNG, JPG, WebP, SVG).';
 $lang['sviat_promo__caption_block_title'] = 'Міні-банер під блоком акції';
 $lang['sviat_promo__caption_block_hint'] = 'Невелике зображення (до ~80 px висоти) у блоці акції на картці товару. «Над текстом» — спочатку банер, під ним рядок акції та таймер. «Під текстом» — рядок акції та таймер, потім банер. «Замість тексту» — банер і «Детальніше», під ними таймер. «Лише зображення» — тільки банер, без тексту й таймера.';
@@ -78,7 +78,7 @@ $lang['sviat_promo__meta_keywords_label'] = 'Meta-keywords';
 $lang['sviat_promo__meta_description_label'] = 'Meta-description';
 
 $lang['sviat_promo__features']        = 'Властивості';
-$lang['sviat_promo__add_feature_row'] = 'Додати фільтр по властивості';
+$lang['sviat_promo__add_feature_row'] = 'Додати фільтр за властивістю';
 $lang['sviat_promo__feature_select']  = 'Оберіть властивість';
 
 $lang['sviat_promo__exclude_no_image'] = 'Виключати товари без фото';
