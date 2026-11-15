@@ -8,8 +8,18 @@ use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
 
 class CampaignPayloadRequest
 {
+    /**
+     * До 10 цифр цілої частини (DECIMAL(14,4)) і до 2 знаків після одного роздільника.
+     * Групування тисяч не допускається: «1,000» і «1.000» — це три знаки після роздільника,
+     * тобто неоднозначне значення, а не 1 чи 1000.
+     */
+    public const string DECIMAL_FORMAT = '/^\d{1,10}(?:[.,]\d{1,2})?$/';
+
     /** @var Request */
     private $request;
+
+    /** @var list<string> */
+    private array $invalidDecimalFields = [];
 
     public function __construct(Request $request)
     {
@@ -65,7 +75,12 @@ class CampaignPayloadRequest
         ];
         $promo->promo_type = in_array($type, $allowed, true) ? $type : PromoCampaignEntity::TYPE_GIFT;
 
-        $promo->min_order_amount = (float) str_replace(',', '.', (string) $this->request->post('min_order_amount', 'string'));
+        $this->invalidDecimalFields = [];
+        $promo->min_order_amount = $this->decimalFromPost('min_order_amount') ?? 0.0;
+        $promo->min_product_price = 0.0;
+        if (in_array($promo->promo_type, [PromoCampaignEntity::TYPE_PERCENT, PromoCampaignEntity::TYPE_FIXED], true)) {
+            $promo->min_product_price = $this->decimalFromPost('min_product_price') ?? 0.0;
+        }
 
         // У старих акціях перемикач вимкнено. Параметр діє лише для цінових акцій.
         $roundFinalPrice = $this->request->post('round_final_price');
@@ -81,21 +96,12 @@ class CampaignPayloadRequest
         $promo->discount_percent = null;
         $promo->discount_fixed = null;
         if ($promo->promo_type === PromoCampaignEntity::TYPE_PERCENT) {
-            $rawDiscountPercent = trim((string) $this->request->post('discount_percent', 'string'));
-            if ($rawDiscountPercent !== '') {
-                $discountPercent = (float) str_replace(',', '.', $rawDiscountPercent);
-                if ($discountPercent < 1) {
-                    $discountPercent = 1.0;
-                } elseif ($discountPercent > 100) {
-                    $discountPercent = 100.0;
-                }
-                $promo->discount_percent = $discountPercent;
+            $discountPercent = $this->decimalFromPost('discount_percent');
+            if ($discountPercent !== null) {
+                $promo->discount_percent = min(100.0, max(1.0, $discountPercent));
             }
         } elseif ($promo->promo_type === PromoCampaignEntity::TYPE_FIXED) {
-            $rawDiscountFixed = trim((string) $this->request->post('discount_fixed', 'string'));
-            if ($rawDiscountFixed !== '' && preg_match('/^\d+(?:[.,]\d+)?$/', $rawDiscountFixed)) {
-                $promo->discount_fixed = (float) str_replace(',', '.', $rawDiscountFixed);
-            }
+            $promo->discount_fixed = $this->decimalFromPost('discount_fixed');
         }
 
         $mode = (int) $this->request->post('product_caption_mode', 'integer');
@@ -216,6 +222,40 @@ class CampaignPayloadRequest
         }
 
         return null;
+    }
+
+    /**
+     * Перше числове поле останнього postPromo(), яке не пройшло формат DECIMAL_FORMAT.
+     * Контролер не зберігає акцію, поки воно є: інакше «1.000» мовчки стало б 1, а
+     * некоректна мінімальна сума — нулем, тобто акцією без умови.
+     */
+    public function invalidDecimalField(): ?string
+    {
+        return $this->invalidDecimalFields[0] ?? null;
+    }
+
+    /**
+     * Невід'ємне число з поля форми за DECIMAL_FORMAT; кома чи крапка — десятковий роздільник.
+     * Фільтр 'string' Request вирізає кому («499,5» → 4995), тому значення береться сирим.
+     *
+     * @return float|null null — поле порожнє або не пройшло формат (тоді воно в invalidDecimalField())
+     */
+    private function decimalFromPost(string $name): ?float
+    {
+        $raw = $this->request->post($name);
+        if (is_scalar($raw)) {
+            $raw = trim((string) $raw);
+        }
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+        if (!is_string($raw) || !preg_match(self::DECIMAL_FORMAT, $raw)) {
+            $this->invalidDecimalFields[] = $name;
+
+            return null;
+        }
+
+        return (float) str_replace(',', '.', $raw);
     }
 
     public function postPromoObject()

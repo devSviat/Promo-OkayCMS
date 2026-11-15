@@ -73,6 +73,8 @@
                         {$btr->sviat_promo__empty_discount_percent|escape}
                     {elseif $message_error == 'empty_discount_fixed'}
                         {$btr->sviat_promo__empty_discount_fixed|escape}
+                    {elseif $message_error == 'invalid_decimal'}
+                        {$btr->getTranslation($invalid_decimal_label)|escape}: {$btr->sviat_promo__invalid_decimal|escape}
                     {elseif $message_error == 'quantity_invalid_tiers'}
                         {$btr->sviat_promo__quantity_invalid_tiers|escape}
                     {elseif $message_error == 'empty_promo_objects'}
@@ -164,13 +166,24 @@
                     <div class="fn_promo_type_section" data-show-for="percent"{if ($promo->promo_type|default:'percent') != 'percent'} style="display:none"{/if}>
                         <div class="col-lg-3 col-md-6 col-sm-12">
                             <div class="heading_label">{$btr->sviat_promo__discount_percent|escape}</div>
-                            <input class="form-control fn_discount_percent" name="discount_percent" type="number" min="1" max="100" step="0.01" value="{$promo->discount_percent|escape}" placeholder="%"/>
+                            {include file='campaign_money_input.tpl' name='discount_percent' class='fn_discount_percent' min='1' max='100' value=$promo->discount_percent placeholder='%'}
                         </div>
                     </div>
                     <div class="fn_promo_type_section" data-show-for="fixed"{if ($promo->promo_type|default:'percent') != 'fixed'} style="display:none"{/if}>
                         <div class="col-lg-3 col-md-6 col-sm-12">
                             <div class="heading_label">{$btr->sviat_promo__discount_fixed|escape}</div>
-                            <input class="form-control fn_discount_fixed" name="discount_fixed" type="number" min="0.01" step="0.01" value="{$promo->discount_fixed|escape}"/>
+                            {include file='campaign_money_input.tpl' name='discount_fixed' class='fn_discount_fixed' min='0.01' max='' value=$promo->discount_fixed placeholder='0'}
+                        </div>
+                    </div>
+                    <div class="fn_promo_type_section" data-show-for="percent,fixed"{if !in_array($promo->promo_type|default:'percent', ['percent','fixed'])} style="display:none"{/if}>
+                        <div class="col-lg-3 col-md-6 col-sm-12">
+                            <div class="heading_label">
+                                {$btr->sviat_promo__min_product_price|escape}
+                                <i class="fn_tooltips" title="{$btr->sviat_promo__min_product_price_hint|escape}">
+                                    {include file='svg_icon.tpl' svgId='icon_tooltips'}
+                                </i>
+                            </div>
+                            {include file='campaign_money_input.tpl' name='min_product_price' class='' min='0' max='' value=$promo->min_product_price placeholder='0'}
                         </div>
                     </div>
                     <div class="fn_promo_type_section" data-show-for="bundle_3x2"{if ($promo->promo_type|default:'percent') != 'bundle_3x2'} style="display:none"{/if}>
@@ -242,7 +255,7 @@
                     <div class="row mt-1 fn_date_range_wrap">
                         <div class="col-lg-3 col-md-6 col-sm-12 mb-1 mb-lg-0">
                             <div class="heading_label">{$btr->sviat_promo__min_order|escape}</div>
-                            <input class="form-control" name="min_order_amount" type="number" value="{$promo->min_order_amount|default:0|escape}"/>
+                            {include file='campaign_money_input.tpl' name='min_order_amount' class='' min='0' max='' value=$promo->min_order_amount placeholder='0'}
                         </div>
                         <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 mb-1 mb-md-0">
                             <div class="heading_label">{$btr->sviat_promo__date_range|escape}</div>

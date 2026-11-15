@@ -10,6 +10,26 @@ use Okay\Core\Modules\AbstractModuleEntityFilter;
 class ProductsPromoFilter extends AbstractModuleEntityFilter
 {
     /**
+     * Чи є у товару варіант, на який відсоткова чи фіксована акція $promo справді дає знижку.
+     * Той самий варіант мусить пройти і поріг «Ціна товару від N», і для fixed суму знижки,
+     * як у PromoProductDisplayService. Ціну перераховано в основну валюту так само, як у
+     * MoneyHelper::convertVariantPriceToMainCurrency(), бо поріг і знижку задано в ній.
+     */
+    private function discountableVariantSql(string $promo): string
+    {
+        return "EXISTS (
+                SELECT 1
+                FROM __variants pvt
+                LEFT JOIN __currencies cvt ON cvt.id = pvt.currency_id
+                WHERE pvt.product_id = p.id
+                  AND ROUND(pvt.price * IF(cvt.rate_from > 0, cvt.rate_to / cvt.rate_from, 1), 2) > 0
+                  AND ROUND(pvt.price * IF(cvt.rate_from > 0, cvt.rate_to / cvt.rate_from, 1), 2)
+                      >= GREATEST({$promo}.min_product_price, IF({$promo}.promo_type = 'fixed', {$promo}.discount_fixed, 0))
+                LIMIT 1
+            )";
+    }
+
+    /**
      * SQL-умова "товар зі знижкою": стандартна compare_price або активна
      * акція Promo (відсоткова/фіксована).
      *
@@ -43,18 +63,8 @@ class ProductsPromoFilter extends AbstractModuleEntityFilter
                   AND (sp.has_date_range = 0 OR (DATE(sp.date_start) <= DATE(NOW()) AND DATE(sp.date_end) >= DATE(NOW())))
                   AND (sp.exclude_no_image = 0 OR COALESCE(p.main_image_id, 0) > 0)
                   AND (
-                    (sp.promo_type = \'percent\' AND sp.discount_percent > 0 AND sp.discount_percent <= 100)
-                    OR (
-                        sp.promo_type = \'fixed\'
-                        AND sp.discount_fixed > 0
-                        AND EXISTS (
-                            SELECT 1
-                            FROM __variants pvf
-                            WHERE pvf.product_id = p.id
-                              AND pvf.price >= sp.discount_fixed
-                            LIMIT 1
-                        )
-                    )
+                    (sp.promo_type = \'percent\' AND sp.discount_percent > 0 AND sp.discount_percent <= 100 AND ' . $this->discountableVariantSql('sp') . ')
+                    OR (sp.promo_type = \'fixed\' AND sp.discount_fixed > 0 AND ' . $this->discountableVariantSql('sp') . ')
                     OR sp.promo_type = \'bundle_3x2\'
                   )
                   AND (
@@ -288,33 +298,16 @@ END";
             ELSE 1
         END";
 
-        // Для fixed-акції товар потрапляє у вибірку лише якщо є варіант з ціною >= discount_fixed.
-        // Для інших типів умову пропускаємо.
-        $fixedPriceCheck = 'CASE
-            WHEN EXISTS (
-                SELECT 1
-                FROM __sviat__promos sp
-                WHERE sp.id = :sv_promo_cid
-                  AND sp.promo_type = \'fixed\'
-            )
-            THEN EXISTS (
-                SELECT 1
-                FROM __sviat__promos sp
-                WHERE sp.id = :sv_promo_cid
-                  AND sp.discount_fixed > 0
-                  AND EXISTS (
-                      SELECT 1
-                      FROM __variants pvf
-                      WHERE pvf.product_id = p.id
-                        AND pvf.price >= sp.discount_fixed
-                      LIMIT 1
-                  )
-            )
-            ELSE 1
-        END';
+        // Для відсоткової й фіксованої акції товар потрапляє на лендинг, лише коли хоч на один
+        // його варіант знижка справді діє; для інших типів умову пропускаємо.
+        $priceCheck = 'NOT EXISTS (
+                SELECT 1 FROM __sviat__promos sp
+                WHERE sp.id = :sv_promo_cid AND sp.promo_type IN (\'percent\', \'fixed\')
+                  AND NOT ' . $this->discountableVariantSql('sp') . '
+            )';
 
-        // Усі типи перевіряємо через "І", плюс виключення і fixed-перевірка.
-        $this->select->where("($productCheck = 1) AND ($categoryCheck = 1) AND ($brandCheck = 1) AND ($featureValueCheck = 1) AND ($fixedPriceCheck = 1) AND ($excludeNoImageCheck = 1) AND $exclusionCheck");
+        // Усі типи перевіряємо через "І", плюс виключення і ціна варіанта.
+        $this->select->where("($productCheck = 1) AND ($categoryCheck = 1) AND ($brandCheck = 1) AND ($featureValueCheck = 1) AND $priceCheck AND ($excludeNoImageCheck = 1) AND $exclusionCheck");
         $this->select->bindValue('sv_promo_cid', $cid);
     }
 

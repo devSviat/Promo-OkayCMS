@@ -63,6 +63,9 @@ class PromoFeedPriceResolver
     /** @var int */
     private $currencyPrecision;
 
+    /** @var array<int, object>|null валюти за id, див. loadCurrencies() */
+    private $currencies = null;
+
     public function __construct(EntityFactory $entityFactory, QueryFactory $queryFactory, PromotionEligibility $eligibility)
     {
         $this->entityFactory = $entityFactory;
@@ -141,6 +144,7 @@ class PromoFeedPriceResolver
         if ($this->activeCampaigns !== null) {
             return;
         }
+        $this->loadCurrencies();
 
         $this->activeCampaigns      = [];
         $this->scopesByCampaign     = [];
@@ -285,9 +289,12 @@ class PromoFeedPriceResolver
     /**
      * Шукає кампанію з найвищим пріоритетом, яка:
      *  – прив'язана до поточного фіда (type + id),
-     *  – підходить товару за правилами скопу.
+     *  – підходить товару за правилами скопу,
+     *  – проходить поріг «Ціна товару від N» для цього варіанта.
+     *
+     * @param float $basePrice ціна варіанта в основній валюті, див. priceInMainCurrency()
      */
-    public function findBestCampaign(int $productId, int $brandId, int $mainCategoryId, int $mainImageId = 0): ?object
+    public function findBestCampaign(int $productId, int $brandId, int $mainCategoryId, int $mainImageId, float $basePrice): ?object
     {
         if (empty($this->activeCampaigns)) {
             return null;
@@ -303,6 +310,9 @@ class PromoFeedPriceResolver
         foreach ($eligible as $campaign) {
             $cid   = (int) $campaign->id;
             if (!empty($campaign->exclude_no_image) && $mainImageId < 1) {
+                continue;
+            }
+            if (!PromotionEligibility::campaignAppliesToPrice($campaign, $basePrice)) {
                 continue;
             }
             if ($this->matchesCampaignScope($cid, $productId, $brandId, $mainCategoryId)) {
@@ -324,6 +334,39 @@ class PromoFeedPriceResolver
         });
 
         return $candidates[0];
+    }
+
+    /**
+     * Рядок фіда несе ціну у валюті варіанта, а поріг акції задано в основній.
+     * Формула та сама, що й у MoneyHelper::convertVariantPriceToMainCurrency() для вітрини.
+     */
+    public function priceInMainCurrency(float $price, $currencyId): float
+    {
+        $this->loadCurrencies();
+        $currency = $this->currencies[$currencyId] ?? null;
+        if (empty($currencyId) || $currency === null || $currency->rate_from == $currency->rate_to) {
+            return $price;
+        }
+
+        return round($price * $currency->rate_to / $currency->rate_from, 2);
+    }
+
+    /**
+     * Фіди читають товари небуферизованим запитом, і поки він відкритий, інший
+     * запит до БД падає (SQLSTATE 2014), а помилку ядро лише пише в лог.
+     * Тому валюти вантажить preload(), ще до циклу товарів.
+     */
+    private function loadCurrencies(): void
+    {
+        if ($this->currencies !== null) {
+            return;
+        }
+        /** @var CurrenciesEntity $currenciesEntity */
+        $currenciesEntity = $this->entityFactory->get(CurrenciesEntity::class);
+        $this->currencies = [];
+        foreach ($currenciesEntity->find() as $currency) {
+            $this->currencies[(int) $currency->id] = $currency;
+        }
     }
 
     /**

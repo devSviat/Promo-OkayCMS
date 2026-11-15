@@ -22,6 +22,14 @@ use Okay\Modules\Sviat\Promo\Services\ProductsWithoutImageFilter;
 
 class CampaignEditAdmin extends IndexAdmin
 {
+    /** Поле форми → ключ перекладу його підпису, для помилки формату числа. */
+    private const array DECIMAL_FIELD_LABELS = [
+        'discount_percent' => 'sviat_promo__discount_percent',
+        'discount_fixed' => 'sviat_promo__discount_fixed',
+        'min_order_amount' => 'sviat_promo__min_order',
+        'min_product_price' => 'sviat_promo__min_product_price',
+    ];
+
     public function fetch(
         EntityFactory        $entityFactory,
         CampaignPayloadRequest $payload,
@@ -82,6 +90,9 @@ class CampaignEditAdmin extends IndexAdmin
                 $this->design->assign('message_error', 'empty_promo_objects');
             } elseif ($promo->promo_type === PromoCampaignEntity::TYPE_QUANTITY && !$quantityTiers) {
                 $this->design->assign('message_error', 'quantity_invalid_tiers');
+            } elseif (($invalidField = $payload->invalidDecimalField()) !== null) {
+                $this->design->assign('message_error', 'invalid_decimal');
+                $this->design->assign('invalid_decimal_label', self::DECIMAL_FIELD_LABELS[$invalidField] ?? $invalidField);
             } elseif ($promo->promo_type === PromoCampaignEntity::TYPE_PERCENT && ($promo->discount_percent === null || $promo->discount_percent <= 0)) {
                 $this->design->assign('message_error', 'empty_discount_percent');
             } elseif ($promo->promo_type === PromoCampaignEntity::TYPE_FIXED && ($promo->discount_fixed === null || $promo->discount_fixed <= 0)) {
@@ -229,6 +240,7 @@ class CampaignEditAdmin extends IndexAdmin
                     'has_date_range'       => 0,
                     'promo_type'           => PromoCampaignEntity::TYPE_PERCENT,
                     'min_order_amount'     => 0,
+                    'min_product_price'    => 0,
                     'discount_percent'     => null,
                     'discount_fixed'       => null,
                     'round_final_price'    => 0,
