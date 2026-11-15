@@ -232,7 +232,6 @@ class CampaignEditAdmin extends IndexAdmin
                     'discount_percent'     => null,
                     'discount_fixed'       => null,
                     'round_final_price'    => 0,
-                    'show_min_order_price' => 0,
                     'catalog_image'        => '',
                     'image_mobile'         => '',
                     'image_width'          => PromoCampaignEntity::DEFAULT_IMAGE_WIDTH,

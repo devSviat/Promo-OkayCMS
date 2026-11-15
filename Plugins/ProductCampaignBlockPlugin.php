@@ -127,7 +127,8 @@ class ProductCampaignBlockPlugin extends Func
      */
     private function computeEffectivePrice(object $campaign, $product): void
     {
-        if (!PromoCampaignEntity::storefrontShowsPrice($campaign)) {
+        // Мінімум замовлення не визначити на сторінці товару. Не показуємо умовну ціну як гарантовану.
+        if ((float) ($campaign->min_order_amount ?? 0) > 0) {
             return;
         }
         if (empty($product->variant)) {

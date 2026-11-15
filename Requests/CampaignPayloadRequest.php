@@ -78,15 +78,6 @@ class CampaignPayloadRequest
             PromoCampaignEntity::TYPE_QUANTITY,
         ], true) && (string) $roundFinalPrice === '1' ? 1 : 0;
 
-        $showMinOrderPrice = $this->request->post('show_min_order_price');
-        if (is_array($showMinOrderPrice)) {
-            $showMinOrderPrice = end($showMinOrderPrice);
-        }
-        $promo->show_min_order_price = in_array($promo->promo_type, [
-            PromoCampaignEntity::TYPE_PERCENT,
-            PromoCampaignEntity::TYPE_FIXED,
-        ], true) && $promo->min_order_amount > 0 && (string) $showMinOrderPrice === '1' ? 1 : 0;
-
         $promo->discount_percent = null;
         $promo->discount_fixed = null;
         if ($promo->promo_type === PromoCampaignEntity::TYPE_PERCENT) {

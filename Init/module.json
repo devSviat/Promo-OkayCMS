@@ -1,6 +1,6 @@
 {
   "Okay": "4.5.3",
-  "version": "2.1.0",
+  "version": "2.0.2",
   "moduleName": "Promo: акції та знижки",
   "vendor": {
     "email": "devsviat@proton.me",
@@ -45,10 +45,6 @@
           {
             "find": "stickers_product-page",
             "append": "{sviat_promo_badge_sticker product=$product}"
-          },
-          {
-            "find": "details_boxed__prices",
-            "appendAfter": "promo_min_order_note.tpl"
           }
         ]
       },
@@ -105,10 +101,6 @@
             "find": "product_preview__image",
             "childrenFind": "class=\"stickers\"",
             "append": "{sviat_promo_badge_sticker product=$product}"
-          },
-          {
-            "find": "product_preview__prices",
-            "appendAfter": "promo_min_order_note.tpl"
           }
         ]
       },

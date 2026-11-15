@@ -63,7 +63,8 @@ class PromoProductDisplayService
         $discountCampaign = null;
         foreach ($allActive as $c) {
             $type = strtolower(trim((string) ($c->promo_type ?? '')));
-            if (!PromoCampaignEntity::storefrontShowsPrice($c)) {
+            // Ціну зі знижкою не можна гарантувати без складу кошика, якщо заданий мінімум замовлення.
+            if ((float) ($c->min_order_amount ?? 0) > 0) {
                 continue;
             }
             if ($type === PromoCampaignEntity::TYPE_PERCENT || $type === PromoCampaignEntity::TYPE_FIXED) {
@@ -77,7 +78,7 @@ class PromoProductDisplayService
     public function applyDiscountDisplay(object $product, ?object $campaign): void
     {
         $pid = (int) ($product->id ?? 0);
-        if ($campaign === null || !PromoCampaignEntity::storefrontShowsPrice($campaign)) {
+        if ($campaign === null || (float) ($campaign->min_order_amount ?? 0) > 0) {
             return;
         }
 
@@ -121,9 +122,5 @@ class PromoProductDisplayService
         $product->variant->price = $effective;
         $product->sviat_promo_discounted_unit_price = $effective;
         $product->sviat_promo_price_display_applied = true;
-        $minOrderAmount = (float) ($campaign->min_order_amount ?? 0);
-        if ($minOrderAmount > 0) {
-            $product->sviat_promo_min_order_amount = $minOrderAmount;
-        }
     }
 }

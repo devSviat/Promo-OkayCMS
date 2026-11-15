@@ -261,19 +261,6 @@
                         </div>
                     </div>
 
-                    <div class="row mt-1 fn_promo_type_section" data-show-for="percent,fixed"{if !in_array($promo->promo_type|default:'percent', ['percent','fixed'])} style="display:none"{/if}>
-                        <div class="col-lg-12 col-md-12 col-sm-12 fn_show_min_order_price"{if !($promo->min_order_amount > 0)} style="display:none"{/if}>
-                            <label class="switch switch-default">
-                                <input type="hidden" name="show_min_order_price" value="0" />
-                                <input class="switch-input" name="show_min_order_price" value="1" type="checkbox" {if !empty($promo->show_min_order_price)}checked=""{/if} />
-                                <span class="switch-label"></span>
-                                <span class="switch-handle"></span>
-                            </label>
-                            <span class="ml-h">{$btr->sviat_promo__show_min_order_price|escape}</span>
-                            <p class="text_grey text_13 mb-0 mt-q">{$btr->sviat_promo__show_min_order_price_hint|escape}</p>
-                        </div>
-                    </div>
-
                 </div>{* /toggle_body_wrap *}
             </div>
         </div>
@@ -1051,11 +1038,6 @@
 
         $(document).on('change', '#fn_promo_type_select', applyPromoTypeSections);
         $(document).on('changed.bs.select', '#fn_promo_type_select', applyPromoTypeSections);
-
-        $(document).on('input change', 'input[name="min_order_amount"]', function() {
-            var amount = parseFloat(String($(this).val()).replace(',', '.'));
-            $('.fn_show_min_order_price').toggle(amount > 0);
-        });
 
         function syncPromoFeedToggle($toggle, animate) {
             if (!$toggle || !$toggle.length) {

@@ -34,16 +34,6 @@ class PromoCampaignEntity extends Entity
     /** Лише зображення банера (без тексту та таймера) */
     public const PRODUCT_CAPTION_IMAGE_ONLY = 3;
 
-    /**
-     * Ціну зі знижкою акції з мінімальною сумою замовлення не гарантовано без кошика,
-     * тож на вітрині її показують, лише коли адміністратор це ввімкнув.
-     */
-    public static function storefrontShowsPrice(object $campaign): bool
-    {
-        return (float) ($campaign->min_order_amount ?? 0) <= 0
-            || (int) ($campaign->show_min_order_price ?? 0) === 1;
-    }
-
     protected static $fields = [
         'id',
         'name',
@@ -79,7 +69,6 @@ class PromoCampaignEntity extends Entity
         'discount_percent',
         'discount_fixed',
         'round_final_price',
-        'show_min_order_price',
         'exclude_no_image',
     ];
 
