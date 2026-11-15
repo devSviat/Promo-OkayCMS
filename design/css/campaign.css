@@ -508,3 +508,9 @@ a.sviat-promo-caption-banner {
 .sviat_promo_original_price del {text-decoration:line-through;text-decoration-thickness:1px;white-space:nowrap;}
 .sviat_promo_original_price .sviat_promo_original_line {display:block;font-size:11px;line-height:1.5;}
 .sviat_promo_original_price .sviat_promo_unit_label {white-space:nowrap;}
+
+.sviat_promo_min_order_note {font-size:12px;line-height:1.35;color:#767b85;margin-top:2px;}
+/* Похідні від okay_shop теми задають картці лістингу фіксовану висоту; підпис її переповнював і ховав кнопки. */
+.product_item:has(.sviat_promo_min_order_note) {height:auto;}
+/* У блоці цін сторінки товару рядок flex-wrap: підпис іде окремим рядком після кількості, а не між ціною й кількістю. */
+.details_boxed__price_amount > .sviat_promo_min_order_note {order:10;flex-basis:100%;margin-top:6px;}

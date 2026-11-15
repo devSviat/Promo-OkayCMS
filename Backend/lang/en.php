@@ -95,4 +95,5 @@ $lang['sviat_promo__quantity_remove'] = 'Remove tier';
 $lang['sviat_promo__quantity_invalid_tiers'] = 'Tiers must be unique, from 2 pcs, with a discount from 0.01 to 100%.';
 $lang['sviat_promo__round_label'] = 'Round the discounted price to a whole number';
 $lang['sviat_promo__round_hint'] = 'The unit price after the discount is rounded to a whole number in the main currency: 912.48 → 912, 912.50 → 913. The line total is the rounded price × quantity. The price never ends up above the regular one.';
-
+$lang['sviat_promo__show_min_order_price'] = 'Show the discounted price on the storefront';
+$lang['sviat_promo__show_min_order_price_hint'] = 'The crossed-out price comes with a note "applies for order totals from …". The cart still applies the discount only from the minimum amount, and feeds keep the regular price.';
