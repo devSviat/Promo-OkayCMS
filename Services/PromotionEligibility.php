@@ -13,7 +13,7 @@ use Okay\Modules\Sviat\Promo\Entities\PromoScopeEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoQuantityTierEntity;
 
 /**
- * Перевіряє дати, мінімальну суму та відповідність товарів умовам кампанії.
+ * Перевіряє дати, мінімальну суму, поріг ціни товару та відповідність товарів умовам кампанії.
  */
 class PromotionEligibility
 {
@@ -518,6 +518,9 @@ class PromotionEligibility
             if (!$this->minOrderSatisfiedAfterOwnDiscount($promo, $cart)) {
                 continue;
             }
+            if (!$this->campaignAppliesToPurchase($promo, $purchase)) {
+                continue;
+            }
             if (!$this->purchaseMatchesCampaign($purchase, (int) $promo->id)) {
                 continue;
             }
@@ -608,6 +611,25 @@ class PromotionEligibility
         return $candidates !== [] ? $candidates[0] : null;
     }
 
+    /**
+     * Умова «Ціна товару від N» (`min_product_price`, 0 = без порогу).
+     *
+     * Знижку Promo рахує окремо для кожного варіанта, тож і поріг перевіряється
+     * для варіанта: $basePrice — його ціна в основній валюті до знижки цієї акції.
+     * Вітрина, фіди, кошик і адмінка замовлення питають саме цей метод.
+     */
+    public static function campaignAppliesToPrice(object $campaign, float $basePrice): bool
+    {
+        $min = (float) ($campaign->min_product_price ?? 0);
+
+        return $min <= 0 || $basePrice >= $min;
+    }
+
+    public function campaignAppliesToPurchase(object $campaign, Purchase $purchase): bool
+    {
+        return self::campaignAppliesToPrice($campaign, (float) $purchase->undiscounted_price);
+    }
+
     public function minOrderSatisfied(object $campaign, Cart $cart): bool
     {
         $min = (float) ($campaign->min_order_amount ?? 0);
@@ -664,7 +686,7 @@ class PromotionEligibility
             if ($this->lineIsBonusGift($purchase)) {
                 continue;
             }
-            if (!$this->purchaseMatchesCampaign($purchase, $campaignId)) {
+            if (!$this->purchaseMatchesCampaign($purchase, $campaignId) || !$this->campaignAppliesToPurchase($campaign, $purchase)) {
                 continue;
             }
 

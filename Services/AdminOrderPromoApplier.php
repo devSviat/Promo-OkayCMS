@@ -133,6 +133,11 @@ class AdminOrderPromoApplier implements ExtensionInterface
             return false;
         }
 
+        $undiscounted = (float) $info['undiscounted_price'];
+        if ($undiscounted <= 0) {
+            return false;
+        }
+
         // Мінімальну суму тут не перевірити: замовлення ще редагують, і його сума
         // не остаточна. Тому, як у картці товару й фідах, такі акції пропускаємо.
         $campaigns = array_values(array_filter(
@@ -141,6 +146,7 @@ class AdminOrderPromoApplier implements ExtensionInterface
                 [PromoCampaignEntity::TYPE_PERCENT, PromoCampaignEntity::TYPE_FIXED]
             ),
             static fn(object $campaign): bool => (float) ($campaign->min_order_amount ?? 0) <= 0
+                && PromotionEligibility::campaignAppliesToPrice($campaign, $undiscounted)
         ));
         if ($campaigns === []) {
             return false;
@@ -148,10 +154,6 @@ class AdminOrderPromoApplier implements ExtensionInterface
         $campaign = $campaigns[0]; // sorted by position ASC, id ASC
 
         $type = strtolower(trim((string) ($campaign->promo_type ?? '')));
-        $undiscounted = (float) $info['undiscounted_price'];
-        if ($undiscounted <= 0) {
-            return false;
-        }
 
         $discountValue = null;
         $discountType  = null;

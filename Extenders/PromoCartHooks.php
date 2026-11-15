@@ -193,6 +193,9 @@ class PromoCartHooks implements ExtensionInterface
             if (!$this->eligibility->campaignDatesOk($promo)) {
                 continue;
             }
+            if (!$this->eligibility->campaignAppliesToPurchase($promo, $purchase)) {
+                continue;
+            }
             if (!$this->eligibility->purchaseMatchesCampaign($purchase, (int) $promo->id)) {
                 continue;
             }

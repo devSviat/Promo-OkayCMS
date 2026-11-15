@@ -93,6 +93,7 @@ class Init extends AbstractInit
                 PromoCampaignEntity::TYPE_FREE_SHIPPING,
             ], false)->setDefault(PromoCampaignEntity::TYPE_PERCENT)->setIndex(),
             ...self::moneyFields(),
+            self::minProductPriceField(),
             new EntityField('round_final_price')->setTypeTinyInt(1, true)->setDefault(0),
             new EntityField('has_date_range')->setTypeTinyInt(1, true)->setDefault(0)->setIndex(),
             new EntityField('date_start')->setTypeDatetime()->setNullable()->setIndex(),
@@ -423,6 +424,17 @@ class Init extends AbstractInit
         if ($this->columnExists(PromoCampaignEntity::getTable(), 'priority')) {
             $this->runStatement('ALTER TABLE `' . PromoCampaignEntity::getTable() . '` DROP COLUMN `priority`');
         }
+    }
+
+    /** Наявні акції отримують 0, тобто без порогу, і поводяться як до 2.1.0. */
+    public function update_2_1_0(): void
+    {
+        $this->migrateEntityField(PromoCampaignEntity::class, self::minProductPriceField());
+    }
+
+    private static function minProductPriceField(): EntityField
+    {
+        return new EntityField('min_product_price')->setTypeDecimal('14,4', false)->setDefault(0);
     }
 
     /** @return EntityField[] */

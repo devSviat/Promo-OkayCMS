@@ -50,7 +50,8 @@ class PromoFeedsExtender implements ExtensionInterface
             (int) ($item->product_id ?? 0),
             (int) ($item->brand_id ?? 0),
             (int) ($item->main_category_id ?? 0),
-            (int) ($item->main_image_id ?? 0)
+            (int) ($item->main_image_id ?? 0),
+            $this->resolver->priceInMainCurrency((float) ($item->price ?? 0), $item->currency_id ?? null)
         );
 
         if ($campaign === null) {

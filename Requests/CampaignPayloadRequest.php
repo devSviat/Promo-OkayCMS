@@ -65,7 +65,15 @@ class CampaignPayloadRequest
         ];
         $promo->promo_type = in_array($type, $allowed, true) ? $type : PromoCampaignEntity::TYPE_GIFT;
 
-        $promo->min_order_amount = (float) str_replace(',', '.', (string) $this->request->post('min_order_amount', 'string'));
+        $minOrderAmount = $this->decimalFromPost('min_order_amount');
+        $promo->min_order_amount = is_float($minOrderAmount) ? $minOrderAmount : 0.0;
+
+        // null означає невалідне значення: контролер покаже помилку, а не збереже 0 мовчки.
+        $promo->min_product_price = 0.0;
+        if (in_array($promo->promo_type, [PromoCampaignEntity::TYPE_PERCENT, PromoCampaignEntity::TYPE_FIXED], true)) {
+            $minProductPrice = $this->decimalFromPost('min_product_price');
+            $promo->min_product_price = $minProductPrice === false ? null : ($minProductPrice ?? 0.0);
+        }
 
         // У старих акціях перемикач вимкнено. Параметр діє лише для цінових акцій.
         $roundFinalPrice = $this->request->post('round_final_price');
@@ -81,20 +89,14 @@ class CampaignPayloadRequest
         $promo->discount_percent = null;
         $promo->discount_fixed = null;
         if ($promo->promo_type === PromoCampaignEntity::TYPE_PERCENT) {
-            $rawDiscountPercent = trim((string) $this->request->post('discount_percent', 'string'));
-            if ($rawDiscountPercent !== '') {
-                $discountPercent = (float) str_replace(',', '.', $rawDiscountPercent);
-                if ($discountPercent < 1) {
-                    $discountPercent = 1.0;
-                } elseif ($discountPercent > 100) {
-                    $discountPercent = 100.0;
-                }
-                $promo->discount_percent = $discountPercent;
+            $discountPercent = $this->decimalFromPost('discount_percent');
+            if (is_float($discountPercent)) {
+                $promo->discount_percent = min(100.0, max(1.0, $discountPercent));
             }
         } elseif ($promo->promo_type === PromoCampaignEntity::TYPE_FIXED) {
-            $rawDiscountFixed = trim((string) $this->request->post('discount_fixed', 'string'));
-            if ($rawDiscountFixed !== '' && preg_match('/^\d+(?:[.,]\d+)?$/', $rawDiscountFixed)) {
-                $promo->discount_fixed = (float) str_replace(',', '.', $rawDiscountFixed);
+            $discountFixed = $this->decimalFromPost('discount_fixed');
+            if (is_float($discountFixed)) {
+                $promo->discount_fixed = $discountFixed;
             }
         }
 
@@ -216,6 +218,29 @@ class CampaignPayloadRequest
         }
 
         return null;
+    }
+
+    /**
+     * Невід'ємне число з поля форми; кома дозволена як десятковий роздільник.
+     * Фільтр 'string' Request її вирізає («499,5» → 4995), тому значення береться сирим.
+     * Межі цифр — це DECIMAL(14,4) колонок акції.
+     *
+     * @return float|null|false null — поле порожнє, false — не число
+     */
+    private function decimalFromPost(string $name): float|null|false
+    {
+        $raw = $this->request->post($name);
+        if (is_scalar($raw)) {
+            $raw = trim((string) $raw);
+        }
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+        if (!is_string($raw) || !preg_match('/^\d{1,10}(?:[.,]\d{1,4})?$/', $raw)) {
+            return false;
+        }
+
+        return (float) str_replace(',', '.', $raw);
     }
 
     public function postPromoObject()

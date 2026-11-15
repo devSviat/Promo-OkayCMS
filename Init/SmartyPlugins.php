@@ -5,6 +5,7 @@ use Okay\Core\EntityFactory;
 use Okay\Helpers\ProductsHelper;
 use Okay\Modules\Sviat\Promo\Plugins\ProductCampaignBlockPlugin;
 use Okay\Modules\Sviat\Promo\Plugins\GiftBadgePlugin;
+use Okay\Modules\Sviat\Promo\Plugins\MoneyInputModifier;
 use Okay\Modules\Sviat\Promo\Plugins\PromoBadgeStickerPlugin;
 use Okay\Modules\Sviat\Promo\Services\PromotionEligibility;
 use Okay\Core\OkayContainer\Reference\ServiceReference as SR;
@@ -27,6 +28,9 @@ return [
             new SR(ProductsHelper::class),
             new SR(PromotionEligibility::class),
         ],
+    ],
+    MoneyInputModifier::class => [
+        'class' => MoneyInputModifier::class,
     ],
     PromoBadgeStickerPlugin::class => [
         'class' => PromoBadgeStickerPlugin::class,

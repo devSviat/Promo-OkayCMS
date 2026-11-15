@@ -57,7 +57,8 @@ class ProductCampaignBlockPlugin extends Func
             return false;
         }
 
-        $campaign = $this->promotionEligibility->pickBestActiveCampaign($promoIds);
+        $base = $this->basePrice($vars['product']->variant);
+        $campaign = $this->campaignForPrice($promoIds, $base);
         if ($campaign === null) {
             return false;
         }
@@ -65,13 +66,34 @@ class ProductCampaignBlockPlugin extends Func
         // Для fixed-акції блок показуємо лише коли ціна поточного варіанта не менша за discount_fixed.
         if ($campaign->promo_type === PromoCampaignEntity::TYPE_FIXED) {
             $fixed = (float) ($campaign->discount_fixed ?? 0);
-            $base = (float) ($vars['product']->variant->price ?? 0);
             if ($fixed <= 0 || $base < $fixed) {
                 return false;
             }
         }
 
         return $this->renderCampaignBlock($campaign, $vars['product']);
+    }
+
+    /** Ціна варіанта до знижки Promo: PromoProductDisplayService міг уже її знизити. */
+    private function basePrice(object $variant): float
+    {
+        return (float) ($variant->sviat_promo_base_price ?? $variant->price ?? 0);
+    }
+
+    /**
+     * Найпріоритетніша активна кампанія, чий поріг «Ціна товару від N» проходить ціна варіанта.
+     *
+     * @param array<int, int> $promoIds
+     */
+    private function campaignForPrice(array $promoIds, float $base): ?object
+    {
+        foreach ($this->promotionEligibility->getActiveCampaigns($promoIds) as $campaign) {
+            if (PromotionEligibility::campaignAppliesToPrice($campaign, $base)) {
+                return $campaign;
+            }
+        }
+
+        return null;
     }
 
     /**

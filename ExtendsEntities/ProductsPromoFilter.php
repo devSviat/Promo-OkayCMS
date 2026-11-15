@@ -10,6 +10,23 @@ use Okay\Core\Modules\AbstractModuleEntityFilter;
 class ProductsPromoFilter extends AbstractModuleEntityFilter
 {
     /**
+     * Чи є у товару варіант, що коштує не менше за $threshold в основній валюті.
+     * Перерахунок той самий, що й у MoneyHelper::convertVariantPriceToMainCurrency(),
+     * щоб лістинг збігався з ціною, яку показує картка (PromotionEligibility::campaignAppliesToPrice()).
+     */
+    private function variantPriceFromSql(string $threshold): string
+    {
+        return "EXISTS (
+                SELECT 1
+                FROM __variants pvt
+                LEFT JOIN __currencies cvt ON cvt.id = pvt.currency_id
+                WHERE pvt.product_id = p.id
+                  AND ROUND(pvt.price * IF(cvt.rate_from > 0, cvt.rate_to / cvt.rate_from, 1), 2) >= {$threshold}
+                LIMIT 1
+            )";
+    }
+
+    /**
      * SQL-умова "товар зі знижкою": стандартна compare_price або активна
      * акція Promo (відсоткова/фіксована).
      *
@@ -57,6 +74,7 @@ class ProductsPromoFilter extends AbstractModuleEntityFilter
                     )
                     OR sp.promo_type = \'bundle_3x2\'
                   )
+                  AND (sp.min_product_price <= 0 OR ' . $this->variantPriceFromSql('sp.min_product_price') . ')
                   AND (
                     CASE
                         WHEN EXISTS (SELECT 1 FROM __sviat__promo_object spo WHERE spo.promo_id = sp.id AND spo.exclude = 0 AND spo.type = \'product\')
@@ -313,8 +331,15 @@ END";
             ELSE 1
         END';
 
-        // Усі типи перевіряємо через "І", плюс виключення і fixed-перевірка.
-        $this->select->where("($productCheck = 1) AND ($categoryCheck = 1) AND ($brandCheck = 1) AND ($featureValueCheck = 1) AND ($fixedPriceCheck = 1) AND ($excludeNoImageCheck = 1) AND $exclusionCheck");
+        // Поріг «Ціна товару від N»: потрібен хоч один варіант, на який діє знижка.
+        $minProductPriceCheck = 'NOT EXISTS (
+                SELECT 1 FROM __sviat__promos sp
+                WHERE sp.id = :sv_promo_cid AND sp.min_product_price > 0
+                  AND NOT ' . $this->variantPriceFromSql('sp.min_product_price') . '
+            )';
+
+        // Усі типи перевіряємо через "І", плюс виключення, fixed-перевірка і поріг ціни.
+        $this->select->where("($productCheck = 1) AND ($categoryCheck = 1) AND ($brandCheck = 1) AND ($featureValueCheck = 1) AND ($fixedPriceCheck = 1) AND $minProductPriceCheck AND ($excludeNoImageCheck = 1) AND $exclusionCheck");
         $this->select->bindValue('sv_promo_cid', $cid);
     }
 

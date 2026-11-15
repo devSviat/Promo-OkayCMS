@@ -125,7 +125,7 @@ class PromoFeedPriceResolverTest extends PromoTestCase
         ]]);
 
         // Image-less product is skipped, with-image one is returned.
-        self::assertNull($resolver->findBestCampaign(1, 0, 0, 0));
-        self::assertSame(7, (int) $resolver->findBestCampaign(1, 0, 0, 11)->id);
+        self::assertNull($resolver->findBestCampaign(1, 0, 0, 0, 100.0));
+        self::assertSame(7, (int) $resolver->findBestCampaign(1, 0, 0, 11, 100.0)->id);
     }
 }

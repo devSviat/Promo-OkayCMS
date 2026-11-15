@@ -106,7 +106,8 @@ class PromoGoogleMerchantExtender implements ExtensionInterface
             (int) ($product->product_id ?? 0),
             (int) ($product->brand_id ?? 0),
             (int) ($product->main_category_id ?? 0),
-            (int) ($product->main_image_id ?? 0)
+            (int) ($product->main_image_id ?? 0),
+            $this->resolver->priceInMainCurrency((float) ($product->price ?? 0), $product->currency_id ?? null)
         );
 
         if ($campaign === null) {

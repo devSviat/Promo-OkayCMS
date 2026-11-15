@@ -66,6 +66,7 @@ class PromoCampaignEntity extends Entity
         'promo_type',
         'position',
         'min_order_amount',
+        'min_product_price',
         'discount_percent',
         'discount_fixed',
         'round_final_price',

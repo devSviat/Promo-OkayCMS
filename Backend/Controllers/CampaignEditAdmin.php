@@ -86,6 +86,8 @@ class CampaignEditAdmin extends IndexAdmin
                 $this->design->assign('message_error', 'empty_discount_percent');
             } elseif ($promo->promo_type === PromoCampaignEntity::TYPE_FIXED && ($promo->discount_fixed === null || $promo->discount_fixed <= 0)) {
                 $this->design->assign('message_error', 'empty_discount_fixed');
+            } elseif ($promo->min_product_price === null) {
+                $this->design->assign('message_error', 'invalid_min_product_price');
             } else {
                 if (empty($promo->id)) {
                     $promo->id = $campaignRepository->add($promo);
@@ -229,6 +231,7 @@ class CampaignEditAdmin extends IndexAdmin
                     'has_date_range'       => 0,
                     'promo_type'           => PromoCampaignEntity::TYPE_PERCENT,
                     'min_order_amount'     => 0,
+                    'min_product_price'    => 0,
                     'discount_percent'     => null,
                     'discount_fixed'       => null,
                     'round_final_price'    => 0,
