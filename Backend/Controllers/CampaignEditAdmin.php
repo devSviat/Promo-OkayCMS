@@ -22,6 +22,14 @@ use Okay\Modules\Sviat\Promo\Services\ProductsWithoutImageFilter;
 
 class CampaignEditAdmin extends IndexAdmin
 {
+    /** Поле форми → ключ перекладу його підпису, для помилки формату числа. */
+    private const array DECIMAL_FIELD_LABELS = [
+        'discount_percent' => 'sviat_promo__discount_percent',
+        'discount_fixed' => 'sviat_promo__discount_fixed',
+        'min_order_amount' => 'sviat_promo__min_order',
+        'min_product_price' => 'sviat_promo__min_product_price',
+    ];
+
     public function fetch(
         EntityFactory        $entityFactory,
         CampaignPayloadRequest $payload,
@@ -82,12 +90,13 @@ class CampaignEditAdmin extends IndexAdmin
                 $this->design->assign('message_error', 'empty_promo_objects');
             } elseif ($promo->promo_type === PromoCampaignEntity::TYPE_QUANTITY && !$quantityTiers) {
                 $this->design->assign('message_error', 'quantity_invalid_tiers');
+            } elseif (($invalidField = $payload->invalidDecimalField()) !== null) {
+                $this->design->assign('message_error', 'invalid_decimal');
+                $this->design->assign('invalid_decimal_label', self::DECIMAL_FIELD_LABELS[$invalidField] ?? $invalidField);
             } elseif ($promo->promo_type === PromoCampaignEntity::TYPE_PERCENT && ($promo->discount_percent === null || $promo->discount_percent <= 0)) {
                 $this->design->assign('message_error', 'empty_discount_percent');
             } elseif ($promo->promo_type === PromoCampaignEntity::TYPE_FIXED && ($promo->discount_fixed === null || $promo->discount_fixed <= 0)) {
                 $this->design->assign('message_error', 'empty_discount_fixed');
-            } elseif ($promo->min_product_price === null) {
-                $this->design->assign('message_error', 'invalid_min_product_price');
             } else {
                 if (empty($promo->id)) {
                     $promo->id = $campaignRepository->add($promo);

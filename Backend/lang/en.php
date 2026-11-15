@@ -97,4 +97,4 @@ $lang['sviat_promo__round_label'] = 'Round the discounted price to a whole numbe
 $lang['sviat_promo__round_hint'] = 'The unit price after the discount is rounded to a whole number in the main currency: 912.48 → 912, 912.50 → 913. The line total is the rounded price × quantity. The price never ends up above the regular one.';
 $lang['sviat_promo__min_product_price'] = 'Product price from';
 $lang['sviat_promo__min_product_price_hint'] = 'The discount applies only to variants that cost at least this amount in the main currency before the discount. Other variants keep their regular price. The discounted price shows on the storefront and in feeds like in any other campaign. 0 means no limit.';
-$lang['sviat_promo__invalid_min_product_price'] = 'The product price threshold must be a non-negative number';
+$lang['sviat_promo__invalid_decimal'] = 'a non-negative number with up to 2 decimals, without spaces or thousands separators';

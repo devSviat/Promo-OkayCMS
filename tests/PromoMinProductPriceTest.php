@@ -525,6 +525,23 @@ class PromoMinProductPriceTest extends PromoTestCase
         }
     }
 
+    /**
+     * @param array<string, mixed> $post
+     * @return array{\stdClass, ?string} акція і перше поле з невалідним числом
+     */
+    private function postPromoWithErrors(array $post): array
+    {
+        $saved = $_POST;
+        $_POST = $post;
+        try {
+            $payload = new CampaignPayloadRequest(new Request());
+
+            return [$payload->postPromo(), $payload->invalidDecimalField()];
+        } finally {
+            $_POST = $saved;
+        }
+    }
+
     public function testAdminSaveParsesThreshold(): void
     {
         $base = ['promo_type' => 'percent', 'discount_percent' => '10'];
@@ -537,22 +554,63 @@ class PromoMinProductPriceTest extends PromoTestCase
         self::assertSame(250.0, $this->postPromo(['promo_type' => 'fixed', 'min_product_price' => '250'])->min_product_price);
     }
 
-    public function testAdminSaveRejectsInvalidThreshold(): void
+    /** @return array<string, array{string}> */
+    public static function invalidDecimals(): array
     {
-        $base = ['promo_type' => 'percent', 'discount_percent' => '10'];
-
-        foreach (['-5', 'abc', '1e3', '10 000', '12345678901', '1.23456'] as $invalid) {
-            self::assertNull($this->postPromo($base + ['min_product_price' => $invalid])->min_product_price, $invalid);
-        }
-        self::assertNull($this->postPromo($base + ['min_product_price' => ['1000']])->min_product_price, 'масив');
+        return [
+            'мінус' => ['-5'],
+            'літери' => ['abc'],
+            'експонента' => ['1e3'],
+            'пробіл тисяч' => ['10 000'],
+            'кома тисяч' => ['1,000'],
+            'крапка тисяч' => ['1.000'],
+            'два роздільники' => ['1.000,50'],
+            'три знаки' => ['12.345'],
+            'забагато цифр' => ['12345678901'],
+            'лише роздільник' => ['5,'],
+        ];
     }
 
-    /** Поріг мають лише відсоткова й фіксована акції; для решти поле не зберігається. */
+    /**
+     * Однаковий формат для всіх числових полів форми: невалідне значення не стає нулем
+     * чи «1», а зупиняє збереження з помилкою.
+     *
+     * @dataProvider invalidDecimals
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('invalidDecimals')]
+    public function testAdminSaveRejectsInvalidDecimalInEveryMoneyField(string $invalid): void
+    {
+        $cases = [
+            'min_order_amount' => ['promo_type' => 'percent', 'discount_percent' => '10'],
+            'min_product_price' => ['promo_type' => 'percent', 'discount_percent' => '10'],
+            'discount_fixed' => ['promo_type' => 'fixed'],
+            'discount_percent' => ['promo_type' => 'percent'],
+        ];
+        foreach ($cases as $field => $base) {
+            [, $error] = $this->postPromoWithErrors($base + [$field => $invalid]);
+            self::assertSame($field, $error, "{$field}: {$invalid}");
+        }
+        [, $error] = $this->postPromoWithErrors(['promo_type' => 'percent', 'discount_percent' => '10', 'min_order_amount' => ['500']]);
+        self::assertSame('min_order_amount', $error, 'масив');
+    }
+
+    public function testValidDecimalsPassWithoutError(): void
+    {
+        foreach (['0', '5', '499,5', '499.50', '1000', '9999999999.99', ' 12,3 '] as $valid) {
+            [$promo, $error] = $this->postPromoWithErrors(['promo_type' => 'fixed', 'discount_fixed' => '10', 'min_order_amount' => $valid, 'min_product_price' => $valid]);
+            self::assertNull($error, $valid);
+            self::assertSame((float) str_replace(',', '.', trim($valid)), $promo->min_order_amount, $valid);
+        }
+    }
+
+    /** Поріг мають лише відсоткова й фіксована акції; для решти поле не читається. */
     public function testThresholdIsResetForOtherCampaignTypes(): void
     {
         foreach (['gift', 'quantity', 'bundle_3x2', 'free_shipping'] as $type) {
+            [$promo, $error] = $this->postPromoWithErrors(['promo_type' => $type, 'min_product_price' => 'abc']);
+            self::assertSame(0.0, $promo->min_product_price, $type);
+            self::assertNull($error, $type);
             self::assertSame(0.0, $this->postPromo(['promo_type' => $type, 'min_product_price' => '1000'])->min_product_price, $type);
-            self::assertSame(0.0, $this->postPromo(['promo_type' => $type, 'min_product_price' => 'abc'])->min_product_price, $type);
         }
     }
 
@@ -596,28 +654,59 @@ class PromoMinProductPriceTest extends PromoTestCase
         self::assertSame($expected, new MoneyInputModifier()->run($value));
     }
 
-    /** Усі грошові поля форми йдуть через модифікатор, з placeholder замість 0. */
-    public function testMoneyFieldsUseModifier(): void
+    /** @param array<string, mixed> $params */
+    private static function renderMoneyInput(array $params): string
+    {
+        $root = dirname(__DIR__, 4);
+        // Сток 4.5.3 має Smarty 4 (клас \Smarty), форк — Smarty 5 (\Smarty\Smarty); потрібні методи однакові.
+        $class = class_exists('Smarty\\Smarty') ? 'Smarty\\Smarty' : 'Smarty';
+        $smarty = new $class();
+        $smarty->setTemplateDir([$root . '/Okay/Modules/Sviat/Promo/Backend/design/html']);
+        $smarty->setCompileDir(sys_get_temp_dir() . '/promo-money-input-' . getmypid());
+        $smarty->registerPlugin('modifier', 'sviat_promo_money_input', [new MoneyInputModifier(), 'run']);
+        $smarty->assign($params + ['class' => '', 'min' => '0', 'max' => '', 'placeholder' => '0']);
+
+        return trim($smarty->fetch('campaign_money_input.tpl'));
+    }
+
+    /** Справжній рендер поля форми: значення з колонки DECIMAL без нулів у хвості, з екрануванням. */
+    public function testMoneyInputTemplateRendersTrimmedValue(): void
+    {
+        $html = self::renderMoneyInput(['name' => 'min_order_amount', 'value' => '500.0000']);
+        self::assertSame('<input class="form-control" name="min_order_amount" type="number" min="0" step="0.01" value="500" placeholder="0"/>', $html);
+
+        self::assertStringContainsString('value="" placeholder="0"', self::renderMoneyInput(['name' => 'min_product_price', 'value' => '0.0000']));
+        self::assertStringContainsString('value="499.5"', self::renderMoneyInput(['name' => 'discount_fixed', 'value' => '499.5000', 'class' => 'fn_discount_fixed', 'min' => '0.01']));
+
+        $percent = self::renderMoneyInput(['name' => 'discount_percent', 'value' => '10.00', 'class' => 'fn_discount_percent', 'min' => '1', 'max' => '100', 'placeholder' => '%']);
+        self::assertSame('<input class="form-control fn_discount_percent" name="discount_percent" type="number" min="1" max="100" step="0.01" value="10" placeholder="%"/>', $percent);
+
+        self::assertStringContainsString('placeholder="&quot;&gt;"', self::renderMoneyInput(['name' => 'x', 'value' => null, 'placeholder' => '">']));
+    }
+
+    /** Усі чотири числові поля форми рендеряться через цей шаблон. */
+    public function testCampaignFormUsesMoneyInputForEveryNumberField(): void
     {
         $template = (string) file_get_contents(dirname(__DIR__, 4) . '/Okay/Modules/Sviat/Promo/Backend/design/html/campaign_edit.tpl');
-        foreach (['discount_fixed', 'min_order_amount', 'min_product_price'] as $field) {
-            self::assertMatchesRegularExpression('/name="' . $field . '"[^>]*value="\{\$promo->' . $field . '\|sviat_promo_money_input\|escape\}" placeholder="0"/', $template, $field);
+        foreach (['discount_percent', 'discount_fixed', 'min_order_amount', 'min_product_price'] as $field) {
+            self::assertMatchesRegularExpression("/\\{include file='campaign_money_input\\.tpl' name='{$field}'[^}]* value=\\\$promo->{$field} /", $template, $field);
         }
-        self::assertStringContainsString('value="{$promo->discount_percent|sviat_promo_money_input|escape}"', $template);
-        self::assertDoesNotMatchRegularExpression('/\$promo->(min_order_amount|min_product_price|discount_fixed|discount_percent)\|(default|escape)/', $template);
+        self::assertDoesNotMatchRegularExpression('/\$promo->(min_order_amount|min_product_price|discount_fixed|discount_percent)\|/', $template);
 
         $registered = include dirname(__DIR__, 4) . '/Okay/Modules/Sviat/Promo/Init/SmartyPlugins.php';
         self::assertArrayHasKey(MoneyInputModifier::class, $registered);
     }
 
-    public function testAdminSaveShowsErrorForInvalidThreshold(): void
+    public function testAdminSaveShowsErrorForInvalidDecimal(): void
     {
         $controller = (string) file_get_contents(dirname(__DIR__, 4) . '/Okay/Modules/Sviat/Promo/Backend/Controllers/CampaignEditAdmin.php');
         $template = (string) file_get_contents(dirname(__DIR__, 4) . '/Okay/Modules/Sviat/Promo/Backend/design/html/campaign_edit.tpl');
 
-        self::assertMatchesRegularExpression('/elseif \(\$promo->min_product_price === null\) \{\s*\$this->design->assign\(\'message_error\', \'invalid_min_product_price\'\);/', $controller);
-        self::assertStringContainsString("{elseif \$message_error == 'invalid_min_product_price'}", $template);
-        self::assertStringContainsString('name="min_product_price" type="number" min="0" step="0.01" value="{$promo->min_product_price|sviat_promo_money_input|escape}"', $template);
+        self::assertMatchesRegularExpression('/elseif \(\(\$invalidField = \$payload->invalidDecimalField\(\)\) !== null\) \{\s*\$this->design->assign\(\'message_error\', \'invalid_decimal\'\);/', $controller);
+        // Перевірка формату стоїть до «вкажіть знижку»: інакше «abc» у знижці дало б не ту помилку.
+        self::assertLessThan(strpos($controller, "'empty_discount_percent'"), strpos($controller, "'invalid_decimal'"));
+        self::assertStringContainsString("{elseif \$message_error == 'invalid_decimal'}", $template);
+        self::assertStringContainsString('{$btr->getTranslation($invalid_decimal_label)|escape}: {$btr->sviat_promo__invalid_decimal|escape}', $template);
         self::assertStringContainsString('{$btr->sviat_promo__min_product_price_hint|escape}', $template);
     }
 
@@ -626,10 +715,13 @@ class PromoMinProductPriceTest extends PromoTestCase
         foreach (['ua', 'en', 'ru'] as $code) {
             $lang = [];
             include dirname(__DIR__, 4) . "/Okay/Modules/Sviat/Promo/Backend/lang/{$code}.php";
-            foreach (['sviat_promo__min_product_price', 'sviat_promo__min_product_price_hint', 'sviat_promo__invalid_min_product_price'] as $key) {
+            foreach (['sviat_promo__min_product_price', 'sviat_promo__min_product_price_hint', 'sviat_promo__invalid_decimal', 'sviat_promo__min_order', 'sviat_promo__discount_fixed', 'sviat_promo__discount_percent'] as $key) {
                 self::assertNotSame('', $lang[$key] ?? '', "{$code}: {$key}");
             }
         }
+        $lang = [];
+        include dirname(__DIR__, 4) . '/Okay/Modules/Sviat/Promo/Backend/lang/ua.php';
+        self::assertSame("невід'ємне число, до 2 знаків після коми, без пробілів і розділювачів тисяч", $lang['sviat_promo__invalid_decimal']);
     }
 
     // ── Міграція ──────────────────────────────────────────────────────────
