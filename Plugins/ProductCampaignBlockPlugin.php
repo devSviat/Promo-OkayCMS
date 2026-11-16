@@ -2,8 +2,6 @@
 
 namespace Okay\Modules\Sviat\Promo\Plugins;
 
-use Okay\Modules\Sviat\Promo\Services\PromoPriceRounding;
-
 use Okay\Core\Design;
 use Okay\Modules\Sviat\Promo\Helpers\ScopedDesignVars;
 use Okay\Core\EntityFactory;
@@ -12,7 +10,9 @@ use Okay\Entities\CurrenciesEntity;
 use Okay\Helpers\ProductsHelper;
 use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoRewardLineEntity;
+use Okay\Modules\Sviat\Promo\Services\PromoProductDisplayService;
 use Okay\Modules\Sviat\Promo\Services\PromotionEligibility;
+use Okay\Modules\Sviat\Promo\Services\PromoUnitOffer;
 
 /**
  * Блок на картці товару: активна кампанія за областю дії (найвищий пріоритет) або подарунок.
@@ -143,40 +143,34 @@ class ProductCampaignBlockPlugin extends Func
 
     /**
      * Обчислює ціну після знижки та встановлює поля на $campaign і $product.
-     * Викликається лише якщо PromoProductDisplayService ще не оброблював цей товар.
+     * Викликається лише якщо PromoProductDisplayService не знизив ціну основного варіанта.
+     * Якщо знижку дасть лише замовлення від мінімальної суми, ціну не показуємо —
+     * лише умову для рядка «−N % при замовленні від …».
      *
      * @param object $product
      */
     private function computeEffectivePrice(object $campaign, $product): void
     {
-        // Мінімум замовлення не визначити на сторінці товару. Не показуємо умовну ціну як гарантовану.
-        if ((float) ($campaign->min_order_amount ?? 0) > 0) {
-            return;
-        }
         if (empty($product->variant)) {
             return;
         }
         $base = (float) $product->variant->price;
-        if ($base <= 0) {
+        $offer = PromoUnitOffer::of($campaign, $base, $this->currencyPrecision);
+        if ($offer === null) {
             return;
         }
 
-        if ($campaign->promo_type === PromoCampaignEntity::TYPE_PERCENT) {
-            $pct = (float) ($campaign->discount_percent ?? 0);
-            if ($pct > 0 && $pct <= 100) {
-                $effective = PromoPriceRounding::price($campaign, $base * (100 - $pct) / 100, $this->currencyPrecision, $base);
-                $campaign->sviat_promo_effective_price = $effective;
-                $product->sviat_promo_discounted_unit_price = $effective;
-                $product->sviat_promo_discount_percent = $pct;
+        if (!PromotionEligibility::minOrderReachedByOneUnit($campaign, $base, $offer->price)) {
+            if (isset($product->variant->id)) {
+                $product->sviat_promo_conditions ??= [];
+                $product->sviat_promo_conditions[(int) $product->variant->id] ??= PromoProductDisplayService::conditionFor($campaign, $offer);
             }
-        } elseif ($campaign->promo_type === PromoCampaignEntity::TYPE_FIXED) {
-            $fixed = (float) ($campaign->discount_fixed ?? 0);
-            if ($fixed > 0 && $base >= $fixed) {
-                $effective = PromoPriceRounding::price($campaign, $base - $fixed, $this->currencyPrecision, $base);
-                $campaign->sviat_promo_effective_price = $effective;
-                $product->sviat_promo_discounted_unit_price = $effective;
-                $product->sviat_promo_discount_percent = round(($fixed / $base) * 100, 2);
-            }
+
+            return;
         }
+
+        $campaign->sviat_promo_effective_price = $offer->price;
+        $product->sviat_promo_discounted_unit_price = $offer->price;
+        $product->sviat_promo_discount_percent = $offer->percent;
     }
 }

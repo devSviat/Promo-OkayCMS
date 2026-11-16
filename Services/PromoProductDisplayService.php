@@ -33,7 +33,9 @@ class PromoProductDisplayService
 
     /**
      * Для списків / картки: знайти кампанію й виставити compare_price > price як у стандартному розпродажі.
-     * Кампанію обирають для кожного варіанта окремо, бо поріг «Ціна товару від N» залежить від його ціни.
+     * Кампанію обирають для кожного варіанта окремо, бо поріг «Ціна товару від N» і мінімальна сума
+     * замовлення залежать від його ціни. Варіант, якому знижку дасть лише замовлення від мінімальної
+     * суми, отримує умову в $product->sviat_promo_conditions[variant_id], а ціна лишається звичайною.
      */
     public function decorateProduct(object $product): void
     {
@@ -62,10 +64,6 @@ class PromoProductDisplayService
         $priceCampaigns = [];
         foreach ($allActive as $c) {
             $type = strtolower(trim((string) ($c->promo_type ?? '')));
-            // Ціну зі знижкою не можна гарантувати без складу кошика, якщо заданий мінімум замовлення.
-            if ((float) ($c->min_order_amount ?? 0) > 0) {
-                continue;
-            }
             if ($type === PromoCampaignEntity::TYPE_PERCENT || $type === PromoCampaignEntity::TYPE_FIXED) {
                 $priceCampaigns[] = $c;
             }
@@ -75,25 +73,23 @@ class PromoProductDisplayService
         }
 
         foreach ($this->variantsOf($product) as $variant) {
-            $campaign = $this->campaignForVariant($priceCampaigns, $variant);
-            if ($campaign === null) {
-                continue;
-            }
-            if ($variant === $product->variant) {
-                $this->applyDiscountDisplay($product, $campaign);
-            } else {
-                $this->applyToVariant((int) $product->id, $variant, $campaign);
+            [$campaign, $condition] = $this->campaignForVariant($priceCampaigns, $variant);
+            if ($campaign !== null) {
+                if ($variant === $product->variant) {
+                    $this->applyDiscountDisplay($product, $campaign);
+                } else {
+                    $this->applyToVariant((int) $product->id, $variant, $campaign);
+                }
+            } elseif ($condition !== null && isset($variant->id)) {
+                $product->sviat_promo_conditions ??= [];
+                $product->sviat_promo_conditions[(int) $variant->id] = $condition;
             }
         }
     }
 
     public function applyDiscountDisplay(object $product, ?object $campaign): void
     {
-        if ($campaign === null || (float) ($campaign->min_order_amount ?? 0) > 0) {
-            return;
-        }
-
-        if (empty($product->variant)) {
+        if ($campaign === null || empty($product->variant)) {
             return;
         }
 
@@ -108,19 +104,56 @@ class PromoProductDisplayService
     }
 
     /**
-     * Перша за пріоритетом цінова кампанія, чий поріг ціни проходить варіант.
+     * Умова для шаблону, коли знижку дасть лише замовлення від мінімальної суми:
+     * стікер на картці й рядок «−N % при замовленні від …» на сторінці товару.
+     */
+    public static function conditionFor(object $campaign, PromoUnitOffer $offer): object
+    {
+        return (object) [
+            'promo_id' => (int) ($campaign->id ?? 0),
+            'promo_type' => strtolower(trim((string) ($campaign->promo_type ?? ''))),
+            'percent' => $offer->percent,
+            'discount_fixed' => (float) ($campaign->discount_fixed ?? 0),
+            'price' => $offer->price,
+            'min_order_amount' => (float) ($campaign->min_order_amount ?? 0),
+        ];
+    }
+
+    /**
+     * Кампанія для ціни варіанта — та, яку взяв би кошик з однією його одиницею:
+     * перша за пріоритетом, чий поріг ціни проходить варіант, а мінімальну суму
+     * замовлення виконує сама одиниця. Кампанію, пропущену через мінімум,
+     * повертаємо умовою, якщо жодна інша ціну не знизила.
      *
      * @param object[] $priceCampaigns
+     * @return array{0: ?object, 1: ?object} [кампанія для ціни, умова]
      */
-    private function campaignForVariant(array $priceCampaigns, object $variant): ?object
+    private function campaignForVariant(array $priceCampaigns, object $variant): array
     {
-        foreach ($priceCampaigns as $campaign) {
-            if (PromotionEligibility::campaignAppliesToPrice($campaign, (float) ($variant->price ?? 0))) {
-                return $campaign;
-            }
+        if (isset($variant->sviat_promo_base_price)) {
+            return [null, null];
         }
 
-        return null;
+        $base = (float) ($variant->price ?? 0);
+        $condition = null;
+        foreach ($priceCampaigns as $campaign) {
+            if (!PromotionEligibility::campaignAppliesToPrice($campaign, $base)) {
+                continue;
+            }
+            if ((float) ($campaign->min_order_amount ?? 0) <= 0) {
+                return [$campaign, null];
+            }
+            $offer = PromoUnitOffer::of($campaign, $base, $this->currencyPrecision);
+            if ($offer === null) {
+                continue;
+            }
+            if (PromotionEligibility::minOrderReachedByOneUnit($campaign, $base, $offer->price)) {
+                return [$campaign, null];
+            }
+            $condition ??= self::conditionFor($campaign, $offer);
+        }
+
+        return [null, $condition];
     }
 
     /**
@@ -161,34 +194,26 @@ class PromoProductDisplayService
             return null;
         }
 
-        $type = strtolower(trim((string) ($campaign->promo_type ?? '')));
-        if ($type === PromoCampaignEntity::TYPE_PERCENT) {
-            $pct = (float) ($campaign->discount_percent ?? 0);
-            if ($pct <= 0 || $pct > 100) {
+        $offer = PromoUnitOffer::of($campaign, $base, $this->currencyPrecision);
+        if ($offer === null) {
+            if (strtolower(trim((string) ($campaign->promo_type ?? ''))) === PromoCampaignEntity::TYPE_PERCENT) {
                 $this->logger->warning('Sviat.Promo display: invalid discount_percent', [
                     'product_id' => $productId,
                     'promo_id' => (int) ($campaign->id ?? 0),
-                    'discount_percent' => $pct,
+                    'discount_percent' => (float) ($campaign->discount_percent ?? 0),
                 ]);
+            }
 
-                return null;
-            }
-            $effective = PromoPriceRounding::price($campaign, $base * (100 - $pct) / 100, $this->currencyPrecision, $base);
-        } elseif ($type === PromoCampaignEntity::TYPE_FIXED) {
-            $fixed = (float) ($campaign->discount_fixed ?? 0);
-            if ($fixed <= 0 || $base < $fixed) {
-                return null;
-            }
-            $effective = PromoPriceRounding::price($campaign, $base - $fixed, $this->currencyPrecision, $base);
-            $pct = round(($fixed / $base) * 100, 2);
-        } else {
+            return null;
+        }
+        if (!PromotionEligibility::minOrderReachedByOneUnit($campaign, $base, $offer->price)) {
             return null;
         }
 
         $variant->sviat_promo_base_price = $base;
         $variant->compare_price = $base;
-        $variant->price = $effective;
+        $variant->price = $offer->price;
 
-        return $pct;
+        return $offer->percent;
     }
 }

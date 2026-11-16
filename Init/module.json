@@ -1,6 +1,6 @@
 {
   "Okay": "4.5.3",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "moduleName": "Promo: акції та знижки",
   "vendor": {
     "email": "devsviat@proton.me",
@@ -95,12 +95,12 @@
           },
           {
             "find": "{if $product->featured || $product->special || ($product->variant->price>0 && $product->variant->compare_price>0 && $product->variant->compare_price>$product->variant->price)}",
-            "replace": "{if $product->featured || $product->special || ($product->variant->price>0 && $product->variant->compare_price>0 && $product->variant->compare_price>$product->variant->price) || $product->sviat_promo_badge_image}"
+            "replace": "{if $product->featured || $product->special || ($product->variant->price>0 && $product->variant->compare_price>0 && $product->variant->compare_price>$product->variant->price) || $product->sviat_promo_badge_image || !empty($product->sviat_promo_conditions)}"
           },
           {
             "find": "product_preview__image",
             "childrenFind": "class=\"stickers\"",
-            "append": "{sviat_promo_badge_sticker product=$product}"
+            "append": "{sviat_promo_badge_sticker product=$product conditional=1}"
           }
         ]
       },

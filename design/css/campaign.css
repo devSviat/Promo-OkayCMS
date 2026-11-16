@@ -508,3 +508,4 @@ a.sviat-promo-caption-banner {
 .sviat_promo_original_price del {text-decoration:line-through;text-decoration-thickness:1px;white-space:nowrap;}
 .sviat_promo_original_price .sviat_promo_original_line {display:block;font-size:11px;line-height:1.5;}
 .sviat_promo_original_price .sviat_promo_unit_label {white-space:nowrap;}
+.sviat_promo__condition {margin-top:8px;font-size:14px;line-height:1.4;}

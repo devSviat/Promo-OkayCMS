@@ -167,8 +167,7 @@ class PromoFeedPriceResolver
             if (!$this->eligibility->campaignDatesOk($c)) {
                 continue;
             }
-            if ((int) ($c->feed_enabled ?? 0) !== 1 || (float) ($c->min_order_amount ?? 0) > 0) {
-                // У фіді немає кошика, тому знижка за мінімальною сумою не є гарантованою ціною.
+            if ((int) ($c->feed_enabled ?? 0) !== 1) {
                 continue;
             }
             $this->activeCampaigns[(int) $c->id] = $c;
@@ -290,7 +289,9 @@ class PromoFeedPriceResolver
      * Шукає кампанію з найвищим пріоритетом, яка:
      *  – прив'язана до поточного фіда (type + id),
      *  – підходить товару за правилами скопу,
-     *  – проходить поріг «Ціна товару від N» для цього варіанта.
+     *  – проходить поріг «Ціна товару від N» для цього варіанта,
+     *  – має мінімальну суму замовлення, яку одна одиниця виконує сама.
+     *    Інакше на сайті ціна без знижки, а Google звіряє ціну фіда з розміткою сторінки.
      *
      * @param float $basePrice ціна варіанта в основній валюті, див. priceInMainCurrency()
      */
@@ -313,6 +314,9 @@ class PromoFeedPriceResolver
                 continue;
             }
             if (!PromotionEligibility::campaignAppliesToPrice($campaign, $basePrice)) {
+                continue;
+            }
+            if (!PromotionEligibility::minOrderReachedByOneUnit($campaign, $basePrice, $this->computePromoPrice($campaign, $basePrice))) {
                 continue;
             }
             if ($this->matchesCampaignScope($cid, $productId, $brandId, $mainCategoryId)) {
@@ -370,33 +374,17 @@ class PromoFeedPriceResolver
     }
 
     /**
-     * Рахує акційну ціну. Повертає null, якщо кампанія або ціна невалідні.
+     * Рахує акційну ціну тією ж формулою, що й вітрина. Повертає null, якщо кампанія або ціна невалідні.
      */
     public function computePromoPrice(object $campaign, float $basePrice): ?float
     {
-        if ($basePrice <= 0) {
+        $type = strtolower(trim((string) ($campaign->promo_type ?? '')));
+        // На відміну від вітрини фід пропускає фіксовану знижку, рівну ціні (ціна 0).
+        if ($type === PromoCampaignEntity::TYPE_FIXED && $basePrice <= (float) ($campaign->discount_fixed ?? 0)) {
             return null;
         }
 
-        $type = strtolower(trim((string) ($campaign->promo_type ?? '')));
-
-        if ($type === PromoCampaignEntity::TYPE_PERCENT) {
-            $pct = (float) ($campaign->discount_percent ?? 0);
-            if ($pct <= 0 || $pct > 100) {
-                return null;
-            }
-            return PromoPriceRounding::price($campaign, $basePrice * (100 - $pct) / 100, $this->currencyPrecision, $basePrice);
-        }
-
-        if ($type === PromoCampaignEntity::TYPE_FIXED) {
-            $fixed = (float) ($campaign->discount_fixed ?? 0);
-            if ($fixed <= 0 || $basePrice <= $fixed) {
-                return null;
-            }
-            return PromoPriceRounding::price($campaign, $basePrice - $fixed, $this->currencyPrecision, $basePrice);
-        }
-
-        return null;
+        return PromoUnitOffer::of($campaign, $basePrice, $this->currencyPrecision)?->price;
     }
 
     // -------------------------------------------------------------------------

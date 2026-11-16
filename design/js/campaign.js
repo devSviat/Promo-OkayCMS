@@ -156,3 +156,12 @@ $(document).on("submit", ".fn_variants", function () {
         }
     });
 });
+
+/* Стікер і рядок «−N % при замовленні від …» належать конкретному варіанту:
+   тема при зміні варіанта перемикає ціни, а ці елементи — ні. */
+$(document).on("change", ".fn_variant", function () {
+    var variantId = String($(this).val());
+    $(this).closest(".fn_product").find(".fn_sviat_promo_condition").each(function () {
+        $(this).toggleClass("hidden-xs-up", String($(this).data("variant-id")) !== variantId);
+    });
+});

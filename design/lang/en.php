@@ -20,6 +20,8 @@ $lang['discount_sviat_promo_name'] = 'Promotion';
 $lang['discount_sviat_promo_description'] = 'Campaign discount: {$promo_name}.';
 $lang['sviat_promo__min_order_notice_from'] = 'applies for order totals from';
 $lang['sviat_promo__min_order_notice_missing'] = 'Still missing';
+$lang['sviat_promo__condition_from'] = 'on orders from';
+$lang['sviat_promo__condition_price'] = 'price will be';
 
 $lang['sviat_promo__bundle_add_more'] = 'Add';
 $lang['sviat_promo__bundle_units_suffix'] = 'one more item - and the 3rd will be added for free';
