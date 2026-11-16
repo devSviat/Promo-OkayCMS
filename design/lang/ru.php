@@ -20,6 +20,8 @@ $lang['discount_sviat_promo_name'] = 'Акция';
 $lang['discount_sviat_promo_description'] = 'Скидка по акции «{$promo_name}».';
 $lang['sviat_promo__min_order_notice_from'] = 'применится при сумме заказа от';
 $lang['sviat_promo__min_order_notice_missing'] = 'Пока не хватает';
+$lang['sviat_promo__condition_from'] = 'при заказе от';
+$lang['sviat_promo__condition_price'] = 'цена будет';
 
 $lang['sviat_promo__bundle_add_more'] = 'Добавьте еще';
 $lang['sviat_promo__bundle_units_suffix'] = 'единицу — и третья добавится бесплатно';

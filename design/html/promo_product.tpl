@@ -32,6 +32,8 @@
             </div>
         {/if}
 
+        {include file='promo_product_condition.tpl'}
+
         {if $promo->promo_type == 'gift' && $promo->gifts}
             <div class="promo_reward__grid" id="promo_gifts">
                 {foreach $promo->gifts as $g}

@@ -702,27 +702,64 @@ class PromotionEligibility
                 continue;
             }
 
-            if ($type === PromoCampaignEntity::TYPE_PERCENT) {
-                $pct = (float) ($campaign->discount_percent ?? 0);
-                if ($pct <= 0 || $pct > 100) {
-                    continue;
-                }
-                $discountTotal += $lineTotal * ($pct / 100);
-                continue;
-            }
-
-            $fixed = (float) ($campaign->discount_fixed ?? 0);
-            if ($fixed <= 0) {
-                continue;
-            }
-            $unitPrice = $lineTotal / $amount;
-            if ($unitPrice < $fixed) {
-                continue;
-            }
-            $discountTotal += $fixed * $amount;
+            $discountTotal += self::ownDiscountForLine($campaign, $lineTotal, $amount);
         }
 
         return $discountTotal;
+    }
+
+    /**
+     * Знижка відсоткової чи фіксованої акції з рядка кошика, як її бачить перевірка
+     * мінімальної суми: без округлення ціни, на відміну від PromoPriceRounding.
+     */
+    private static function ownDiscountForLine(object $campaign, float $lineTotal, int $amount): float
+    {
+        $type = strtolower(trim((string) ($campaign->promo_type ?? '')));
+        if ($type === PromoCampaignEntity::TYPE_PERCENT) {
+            $pct = (float) ($campaign->discount_percent ?? 0);
+            if ($pct <= 0 || $pct > 100) {
+                return 0.0;
+            }
+
+            return $lineTotal * ($pct / 100);
+        }
+
+        if ($type === PromoCampaignEntity::TYPE_FIXED) {
+            $fixed = (float) ($campaign->discount_fixed ?? 0);
+            if ($fixed <= 0 || $lineTotal / $amount < $fixed) {
+                return 0.0;
+            }
+
+            return $fixed * $amount;
+        }
+
+        return 0.0;
+    }
+
+    /**
+     * Чи одна одиниця варіанта сама виконує «Мінімальну суму замовлення» цієї акції.
+     * Тоді знижку можна показати як звичайну: кошик з однією одиницею її дасть
+     * (minOrderSatisfiedAfterOwnDiscount). Вітрина, блок акції й фіди питають цей метод.
+     *
+     * Вимагаємо обидві суми: ціну зі знижкою після PromoPriceRounding, яку бачить покупець,
+     * і суму без округлення, з якою порівнює кошик, — округлення вгору не має обіцяти знижку.
+     *
+     * @param float      $basePrice           ціна варіанта в основній валюті до знижки
+     * @param float|null $discountedUnitPrice ціна зі знижкою; null — акція не знижує цю ціну
+     */
+    public static function minOrderReachedByOneUnit(object $campaign, float $basePrice, ?float $discountedUnitPrice): bool
+    {
+        $min = (float) ($campaign->min_order_amount ?? 0);
+        if ($min <= 0) {
+            return true;
+        }
+        if ($discountedUnitPrice === null) {
+            return false;
+        }
+
+        $cartUnitPrice = $basePrice - self::ownDiscountForLine($campaign, $basePrice, 1);
+
+        return min($discountedUnitPrice, $cartUnitPrice) >= $min;
     }
 
     /**

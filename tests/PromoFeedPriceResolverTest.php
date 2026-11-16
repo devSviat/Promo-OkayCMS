@@ -3,8 +3,11 @@
 namespace Modules\Sviat\Promo;
 
 use Okay\Core\QueryFactory;
+use Okay\Core\QueryFactory\Select;
 use Okay\Entities\CurrenciesEntity;
 use Okay\Modules\Sviat\Promo\Entities\PromoCampaignEntity;
+use Okay\Modules\Sviat\Promo\Entities\PromoFeedLinkEntity;
+use Okay\Modules\Sviat\Promo\Entities\PromoScopeEntity;
 use Okay\Modules\Sviat\Promo\Services\PromoFeedPriceResolver;
 use Okay\Modules\Sviat\Promo\Services\PromotionEligibility;
 
@@ -127,5 +130,108 @@ class PromoFeedPriceResolverTest extends PromoTestCase
         // Image-less product is skipped, with-image one is returned.
         self::assertNull($resolver->findBestCampaign(1, 0, 0, 0, 100.0));
         self::assertSame(7, (int) $resolver->findBestCampaign(1, 0, 0, 11, 100.0)->id);
+    }
+
+    /** Резолвер фіду Feeds 99 з уже завантаженими кампаніями на товар 1. */
+    private function loadedResolver(object ...$campaigns): PromoFeedPriceResolver
+    {
+        $resolver = $this->makeResolver(2);
+        $active = $links = $scopes = [];
+        foreach ($campaigns as $campaign) {
+            $id = (int) $campaign->id;
+            $active[$id] = $campaign;
+            $links[$id] = ['feeds' => [99]];
+            $scopes[$id] = [
+                'inclusions' => ['has_rows' => true, 'products' => [1 => true], 'brands' => [], 'categories' => [], 'feature_groups' => []],
+                'exclusions' => ['has_rows' => false, 'products' => [], 'brands' => [], 'categories' => [], 'feature_groups' => []],
+            ];
+        }
+        \Closure::bind(function () use ($active, $links, $scopes) {
+            $this->currentFeedType = 'feeds';
+            $this->currentFeedId = 99;
+            $this->activeCampaigns = $active;
+            $this->feedLinksByCampaign = $links;
+            $this->scopesByCampaign = $scopes;
+        }, $resolver, PromoFeedPriceResolver::class)();
+
+        return $resolver;
+    }
+
+    private function minOrderPromo(array $overrides = []): \stdClass
+    {
+        return $this->buildPromo(array_merge(['id' => 7, 'feed_enabled' => 1, 'discount_percent' => 10, 'min_order_amount' => 1000], $overrides));
+    }
+
+    /** Фід має збігатися з ціною на сайті: гарантований варіант — зі знижкою, умовний — без. */
+    public function testFindBestCampaignIncludesGuaranteedAndExcludesConditional(): void
+    {
+        $resolver = $this->loadedResolver($this->minOrderPromo());
+
+        self::assertSame(7, (int) $resolver->findBestCampaign(1, 0, 0, 11, 1200.0)?->id);
+        self::assertNull($resolver->findBestCampaign(1, 0, 0, 11, 1000.0));
+        self::assertNull($resolver->findBestCampaign(1, 0, 0, 11, 1111.0), '999.9 < 1000');
+    }
+
+    public function testFixedMinOrderCampaignInFeed(): void
+    {
+        $resolver = $this->loadedResolver($this->minOrderPromo(['promo_type' => PromoCampaignEntity::TYPE_FIXED, 'discount_percent' => null, 'discount_fixed' => 300]));
+
+        self::assertSame(7, (int) $resolver->findBestCampaign(1, 0, 0, 11, 1300.0)?->id);
+        self::assertNull($resolver->findBestCampaign(1, 0, 0, 11, 1299.0));
+    }
+
+    /** Як у кошику з однією одиницею: умовна акція поступається наступній за пріоритетом. */
+    public function testConditionalCampaignYieldsToNextInFeed(): void
+    {
+        $resolver = $this->loadedResolver(
+            $this->minOrderPromo(['discount_percent' => 20]),
+            $this->buildPromo(['id' => 9, 'position' => 1, 'feed_enabled' => 1, 'discount_percent' => 5])
+        );
+
+        self::assertSame(9, (int) $resolver->findBestCampaign(1, 0, 0, 11, 1000.0)?->id);
+        self::assertSame(7, (int) $resolver->findBestCampaign(1, 0, 0, 11, 1500.0)?->id);
+    }
+
+    /** preload() більше не відкидає кампанії з мінімальною сумою — рішення приймається на кожен варіант. */
+    public function testPreloadKeepsMinOrderCampaigns(): void
+    {
+        $campaigns = $this->createStub(PromoCampaignEntity::class);
+        $campaigns->method('noLimit')->willReturnSelf();
+        $campaigns->method('find')->willReturn([$this->minOrderPromo()]);
+        $scopes = $this->createStub(PromoScopeEntity::class);
+        $scopes->method('noLimit')->willReturnSelf();
+        $scopes->method('find')->willReturn([(object) ['promo_id' => 7, 'type' => 'product', 'object_id' => 1, 'exclude' => 0]]);
+        $links = $this->createStub(PromoFeedLinkEntity::class);
+        $links->method('getLinkedFeedsGrouped')->willReturn([7 => ['feeds' => [99]]]);
+        $currencies = $this->createStub(CurrenciesEntity::class);
+        $currencies->method('getMainCurrency')->willReturn((object) ['id' => 1, 'cents' => 2]);
+        $currencies->method('find')->willReturn([]);
+        $select = $this->createStub(Select::class);
+        $select->method('from')->willReturnSelf();
+        $select->method('cols')->willReturnSelf();
+        $select->method('results')->willReturn([]);
+        $queryFactory = $this->createStub(QueryFactory::class);
+        $queryFactory->method('newSelect')->willReturn($select);
+        $eligibility = $this->createStub(PromotionEligibility::class);
+        $eligibility->method('campaignDatesOk')->willReturn(true);
+        $resolver = new PromoFeedPriceResolver(
+            $this->mockEntityFactory([
+                CurrenciesEntity::class => $currencies,
+                PromoCampaignEntity::class => $campaigns,
+                PromoScopeEntity::class => $scopes,
+                PromoFeedLinkEntity::class => $links,
+            ]),
+            $queryFactory,
+            $eligibility
+        );
+        \Closure::bind(function () {
+            $this->currentFeedType = 'feeds';
+            $this->currentFeedId = 99;
+        }, $resolver, PromoFeedPriceResolver::class)();
+
+        $resolver->preload();
+
+        self::assertSame(7, (int) $resolver->findBestCampaign(1, 0, 0, 11, 1200.0)?->id);
+        self::assertNull($resolver->findBestCampaign(1, 0, 0, 11, 1000.0));
     }
 }
