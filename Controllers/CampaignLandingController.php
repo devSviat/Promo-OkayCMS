@@ -10,6 +10,7 @@ use Okay\Entities\PagesEntity;
 use Okay\Entities\ProductsEntity;
 use Okay\Helpers\ProductsHelper;
 use Okay\Modules\Sviat\Promo\Helpers\CampaignRepository;
+use Okay\Modules\Sviat\Promo\Services\CampaignPhase;
 
 class CampaignLandingController extends AbstractController
 {
@@ -29,15 +30,9 @@ class CampaignLandingController extends AbstractController
         }
 
         $now = time();
-
-        $isDateExpired = !empty($promo->has_date_range)
-            && !empty($promo->date_end)
-            && strtotime((string) $promo->date_end) < $now;
-
-        $isUpcoming = !$isDateExpired
-            && !empty($promo->has_date_range)
-            && !empty($promo->date_start)
-            && strtotime((string) $promo->date_start) > $now;
+        $phase = CampaignPhase::fromPromo($promo, $now);
+        $isDateExpired = $phase === CampaignPhase::Ended;
+        $isUpcoming = $phase === CampaignPhase::Upcoming;
 
         // Вимкнена в адмінці (visible=0) — не показуємо сторінку нікому, включно з адміном
         if ((int) ($promo->visible ?? 0) !== 1) {
@@ -46,6 +41,10 @@ class CampaignLandingController extends AbstractController
 
         $promo->is_expired  = $isDateExpired;
         $promo->is_upcoming = $isUpcoming;
+
+        if (!$phase->isIndexable()) {
+            $this->design->assign('noindex_follow', true);
+        }
 
         if ($isUpcoming && !empty($promo->date_start)) {
             $promo->seconds_to_start = (int) strtotime((string) $promo->date_start) - $now;
