@@ -19,7 +19,7 @@
                     <span>{$btr->general_open|escape}</span>
                 </a>
             {/if}
-            <a class="btn btn_small btn_border-info ml-1" href="{if $smarty.get.return}{$smarty.get.return|escape}{else}{url controller=CampaignListAdmin}{/if}">
+            <a class="btn btn_small btn_border-info ml-1" href="{if $smarty.get.return}{$smarty.get.return|escape}{else}{url controller=[Sviat,Promo,CampaignListAdmin] id=null}{/if}">
                 {include file='svg_icon.tpl' svgId='return'}
                 <span>{$btr->general_back|escape}</span>
             </a>
